@@ -1,0 +1,303 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Garage Pro v7.4 - Fixed Access</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.6.0/css/all.min.css">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700;800&display=swap');
+        body { 
+            font-family: 'Plus Jakarta Sans', sans-serif; 
+            background: #050505; color: #fff; margin: 0; -webkit-tap-highlight-color: transparent; 
+        }
+        .orange-gradient { background: linear-gradient(135deg, #f97316 0%, #ea580c 100%); }
+        .card-dark { background: rgba(30, 30, 30, 0.6); backdrop-filter: blur(10px); border: 1px solid rgba(255,255,255,0.05); }
+        .tab.active { color: #f97316; border-bottom: 3px solid #f97316; opacity: 1; }
+        .tab { opacity: 0.4; cursor: pointer; padding-bottom: 10px; font-weight: 800; text-transform: uppercase; font-size: 11px; }
+        input, select { background: rgba(40, 40, 40, 0.9) !important; color: white !important; border: 1px solid #333 !important; padding: 14px; border-radius: 12px; width: 100%; outline: none; }
+        .hidden { display: none !important; }
+        #login-screen { position: fixed; inset: 0; background: #000; z-index: 2000; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 20px; }
+    </style>
+</head>
+<body class="pb-24">
+
+<div id="login-screen">
+    <div class="w-16 h-16 bg-orange-500 rounded-2xl flex items-center justify-center mb-6 shadow-2xl">
+        <i class="fa-solid fa-screwdriver-wrench text-white text-2xl"></i>
+    </div>
+    <h2 class="text-xl font-black text-orange-500 uppercase italic mb-8 tracking-widest">Garage Pro Login</h2>
+    <div class="w-full max-w-xs space-y-4">
+        <input type="password" id="pass-input" placeholder="Masukkan Password" class="text-center font-bold tracking-[0.5em]">
+        <button id="btn-login-final" class="orange-gradient w-full py-4 rounded-xl font-black text-xs uppercase tracking-widest shadow-lg active:scale-95 transition-transform">
+            Buka Dashboard
+        </button>
+        <p id="login-msg" class="text-[10px] text-red-500 text-center font-bold uppercase hidden italic">Akses Ditolak: Password Salah!</p>
+    </div>
+</div>
+
+<div id="print-area" class="hidden text-black p-4"></div>
+
+<div id="dashboard-content" class="hidden max-w-4xl mx-auto p-4">
+    <header class="flex justify-between items-center mb-8">
+        <div class="flex items-center gap-3">
+            <div class="w-12 h-12 bg-orange-500 rounded-2xl flex items-center justify-center">
+                <i class="fa-solid fa-car-side text-white text-2xl"></i>
+            </div>
+            <div>
+                <h1 class="text-xl font-black italic text-orange-500 uppercase tracking-tighter leading-none">Je Garage Pro</h1>
+                <p class="text-[8px] text-zinc-500 font-bold uppercase mt-1">v7.4 | Stable Engine</p>
+            </div>
+        </div>
+        <div class="flex gap-2">
+            <button id="btn-refresh" class="w-10 h-10 rounded-xl bg-zinc-900 border border-zinc-800 text-orange-500 flex items-center justify-center"><i class="fa-solid fa-sync"></i></button>
+            <button id="btn-logout" class="w-10 h-10 rounded-xl bg-zinc-900 border border-zinc-800 text-red-500 flex items-center justify-center"><i class="fa-solid fa-right-from-bracket"></i></button>
+        </div>
+    </header>
+
+    <nav class="flex gap-6 border-b border-zinc-900 mb-8 overflow-x-auto no-scrollbar">
+        <div id="btn-tab-database" class="tab active">Database</div>
+        <div id="btn-tab-servis" class="tab">Workshop</div>
+        <div id="btn-tab-stok" class="tab">Gudang</div>
+        <div id="btn-tab-finance" class="tab">Laporan</div>
+    </nav>
+
+    <div id="tab-database" class="tab-content">
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div class="card-dark p-5 rounded-[2rem]">
+                <button id="add-pelanggan" class="orange-gradient w-full py-4 rounded-2xl font-black mb-6 text-[10px] uppercase">+ Pelanggan Baru</button>
+                <div id="list-pelanggan" class="space-y-3"></div>
+            </div>
+            <div class="card-dark p-5 rounded-[2rem]">
+                <button id="add-unit" class="bg-zinc-800 w-full py-4 rounded-2xl font-black mb-6 text-[10px] uppercase">+ Unit Baru</button>
+                <div id="list-kendaraan" class="space-y-3"></div>
+            </div>
+        </div>
+    </div>
+
+    <div id="tab-servis" class="tab-content hidden">
+        <input type="text" id="search-ws" placeholder="Cari plat nomor..." class="mb-6 text-xs italic">
+        <div id="list-workshop" class="space-y-4"></div>
+    </div>
+
+    <div id="tab-stok" class="tab-content hidden">
+        <button id="add-stok" class="bg-blue-600 w-full py-4 rounded-2xl font-black mb-6 text-[10px] uppercase">+ Stok Gudang</button>
+        <div class="grid grid-cols-2 gap-4" id="list-stok"></div>
+    </div>
+
+    <div id="tab-finance" class="tab-content hidden">
+        <div id="finance-summary" class="grid grid-cols-2 gap-3 mb-6"></div>
+        <div id="list-finance" class="space-y-4"></div>
+    </div>
+</div>
+
+<div id="modal-container" class="fixed inset-0 bg-black/95 hidden flex items-center justify-center p-4 z-[3000] backdrop-blur-md">
+    <div class="card-dark w-full max-w-lg p-6 rounded-[2.5rem] shadow-2xl overflow-y-auto max-h-[90vh]">
+        <h3 id="modal-title" class="text-xl font-bold text-orange-500 mb-6 uppercase italic"></h3>
+        <div id="modal-body" class="space-y-4"></div>
+        <div class="flex flex-col gap-2 mt-8">
+            <button id="btn-execute-modal" class="orange-gradient py-4 rounded-xl font-black text-xs uppercase tracking-widest">Simpan Data</button>
+            <button id="btn-close-modal" class="bg-zinc-900 py-4 rounded-xl font-bold text-xs text-zinc-500 uppercase">Batal</button>
+        </div>
+    </div>
+</div>
+
+<script type="module">
+    import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm"
+    
+    const SB_URL = "https://lxbfgnobjaqxojggjonh.supabase.co";
+    const SB_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imx4YmZnbm9iamFxeG9qZ2dqb25oIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzY0MjIxMDUsImV4cCI6MjA5MTk5ODEwNX0.GbY962sK8VFCShqlvW7olRnWtJMkLlr3f1NuSc2kV6E";
+    const supabase = createClient(SB_URL, SB_KEY);
+
+    const PASS = "cuma123";
+    let cart = [];
+
+    // --- CORE LOGIN LOGIC (Paling Penting) ---
+    const handleLogin = () => {
+        const input = document.getElementById('pass-input').value;
+        if(input === PASS) {
+            localStorage.setItem('garage_session_v4', 'true');
+            document.getElementById('login-screen').classList.add('hidden');
+            document.getElementById('dashboard-content').classList.remove('hidden');
+            loadAll();
+        } else {
+            const err = document.getElementById('login-msg');
+            err.classList.remove('hidden');
+            setTimeout(() => err.classList.add('hidden'), 2000);
+        }
+    };
+
+    // Binding Tombol Login (Direct Event)
+    document.getElementById('btn-login-final').addEventListener('click', handleLogin);
+    document.getElementById('pass-input').addEventListener('keypress', (e) => { if(e.key === 'Enter') handleLogin(); });
+
+    // --- TAB SYSTEM ---
+    const switchTab = (tabId) => {
+        document.querySelectorAll('.tab-content').forEach(c => c.classList.add('hidden'));
+        document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+        document.getElementById(tabId).classList.remove('hidden');
+        document.getElementById('btn-' + tabId).classList.add('active');
+    };
+
+    document.querySelectorAll('.tab').forEach(tab => {
+        tab.addEventListener('click', () => switchTab(tab.id.replace('btn-', '')));
+    });
+
+    // --- LOAD DATA ---
+    async function loadAll() {
+        const { data: p } = await supabase.from('pelanggan').select('*').order('nama');
+        const { data: k } = await supabase.from('kendaraan').select('*, pelanggan(*)').order('created_at', {ascending: false});
+        const { data: s } = await supabase.from('servis').select('*, kendaraan(*, pelanggan(*))').order('created_at', {ascending: false});
+        const { data: st } = await supabase.from('stok_sparepart').select('*').order('nama_barang');
+
+        // Render Pelanggan
+        document.getElementById('list-pelanggan').innerHTML = (p || []).map(i => `
+            <div class="bg-zinc-900/50 p-4 rounded-xl flex justify-between items-center border border-white/5">
+                <span class="text-xs font-bold uppercase">${i.nama}</span>
+            </div>
+        `).join('');
+
+        // Render Unit & Tombol Servis
+        document.getElementById('list-kendaraan').innerHTML = (k || []).map(i => `
+            <div class="bg-zinc-800/30 p-4 rounded-xl flex justify-between items-center border border-zinc-800">
+                <div><p class="text-orange-500 font-black">${i.plat}</p><p class="text-[9px] opacity-50 uppercase">${i.pelanggan?.nama}</p></div>
+                <button onclick="window.openServis('${i.id}', '${i.plat}')" class="orange-gradient px-4 py-2 rounded-lg text-[10px] font-black uppercase">Mulai Servis</button>
+            </div>
+        `).join('');
+
+        // Render Stok
+        document.getElementById('list-stok').innerHTML = (st || []).map(i => `
+            <div class="card-dark p-4 rounded-2xl border-l-4 ${i.jumlah_stok < 5 ? 'border-red-500' : 'border-blue-500'}">
+                <p class="text-[9px] uppercase opacity-50 font-bold">${i.nama_barang}</p>
+                <h4 class="text-lg font-black">${i.jumlah_stok} <span class="text-[10px] opacity-50">${i.satuan}</span></h4>
+            </div>
+        `).join('');
+
+        // Render Workshop List
+        document.getElementById('list-workshop').innerHTML = (s || []).map(x => {
+            const tgl = new Date(x.created_at);
+            const total = (x.jasa_service || 0) + (x.biaya_sparepart || 0);
+            return `
+            <div class="card-dark p-5 rounded-3xl border-l-4 ${total - x.uang_muka > 0 ? 'border-red-600' : 'border-emerald-600'}">
+                <div class="flex justify-between">
+                    <div>
+                        <h3 class="text-lg font-black text-orange-500 italic">${x.kendaraan?.plat}</h3>
+                        <p class="text-[9px] uppercase text-zinc-500 font-bold">${tgl.toLocaleDateString('id-ID', {day:'2-digit', month:'short', year:'numeric'})} | ${tgl.toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})}</p>
+                    </div>
+                    <button onclick="window.printNota('${x.id}')" class="text-orange-500 bg-orange-500/10 w-10 h-10 rounded-xl"><i class="fa-solid fa-print"></i></button>
+                </div>
+                <div class="mt-4 flex justify-between items-center pt-3 border-t border-white/5">
+                    <p class="text-[10px] italic opacity-40">${x.keluhan}</p>
+                    <p class="font-black text-sm text-emerald-500">Rp ${total.toLocaleString()}</p>
+                </div>
+            </div>`;
+        }).join('');
+    }
+
+    // --- MODAL & ACTION HANDLERS ---
+    window.openServis = (unitId, plat) => {
+        const body = document.getElementById('modal-body');
+        document.getElementById('modal-title').innerText = "Servis Unit: " + plat;
+        body.innerHTML = `
+            <input id="ws-keluhan" placeholder="Pekerjaan / Keluhan">
+            <input id="ws-jasa" type="number" placeholder="Jasa Service (Rp)">
+            <div class="bg-black/40 p-4 rounded-xl">
+                <p class="text-[9px] text-zinc-500 mb-2 uppercase font-bold">Ambil Sparepart</p>
+                <div id="spare-select-area">Loading stok...</div>
+                <div id="cart-list" class="mt-3 space-y-1"></div>
+            </div>
+            <input id="ws-bayar" type="number" placeholder="Bayar DP / Lunas (Rp)">
+        `;
+        document.getElementById('modal-container').classList.remove('hidden');
+        renderSpareDropdown();
+        
+        document.getElementById('btn-execute-modal').onclick = async () => {
+            const btn = document.getElementById('btn-execute-modal');
+            btn.disabled = true; btn.innerText = "SEDANG MENYIMPAN...";
+            
+            const totalPart = cart.reduce((a, b) => a + (b.harga * b.qty), 0);
+            const { data: n } = await supabase.from('servis').insert([{ 
+                kendaraan_id: unitId, 
+                keluhan: document.getElementById('ws-keluhan').value, 
+                jasa_service: document.getElementById('ws-jasa').value || 0, 
+                biaya_sparepart: totalPart, 
+                uang_muka: document.getElementById('ws-bayar').value || 0,
+                metode_bayar: 'Tunai'
+            }]).select().single();
+
+            for(let it of cart) {
+                await supabase.from('detail_servis').insert([{ servis_id: n.id, stok_id: it.stok_id, jumlah: it.qty, harga_satuan: it.harga }]);
+                if(it.stok_id) {
+                    const { data: cur } = await supabase.from('stok_sparepart').select('jumlah_stok').eq('id', it.stok_id).single();
+                    await supabase.from('stok_sparepart').update({ jumlah_stok: cur.jumlah_stok - it.qty }).eq('id', it.stok_id);
+                }
+            }
+
+            btn.disabled = false; btn.innerText = "Simpan Data";
+            closeModal(); loadAll();
+        };
+    };
+
+    async function renderSpareDropdown() {
+        const { data: st } = await supabase.from('stok_sparepart').select('*').order('nama_barang');
+        document.getElementById('spare-select-area').innerHTML = `
+            <div class="flex gap-2">
+                <select id="ws-part-sel" class="flex-1">
+                    <option value="">-- Pilih --</option>
+                    ${st.map(i => `<option value="${i.id}" data-harga="${i.harga_jual_satuan}">${i.nama_barang} (Rp ${i.harga_jual_satuan.toLocaleString()})</option>`).join('')}
+                </select>
+                <button id="add-to-cart" class="bg-blue-600 px-4 rounded-xl font-bold">+</button>
+            </div>
+        `;
+        document.getElementById('add-to-cart').onclick = () => {
+            const sel = document.getElementById('ws-part-sel');
+            const opt = sel.selectedOptions[0];
+            if(!opt.value) return;
+            cart.push({ stok_id: opt.value, nama: opt.text.split(' (')[0], harga: parseInt(opt.dataset.harga), qty: 1 });
+            renderCart();
+        };
+    }
+
+    function renderCart() {
+        document.getElementById('cart-list').innerHTML = cart.map(i => `<div class="flex justify-between text-[10px] bg-white/5 p-2 rounded"><span>${i.nama}</span><span>Rp ${i.harga.toLocaleString()}</span></div>`).join('');
+    }
+
+    window.printNota = async (id) => {
+        const { data: s } = await supabase.from('servis').select('*, kendaraan(*, pelanggan(*))').eq('id', id).single();
+        const { data: d } = await supabase.from('detail_servis').select('*, stok_sparepart(nama_barang)').eq('servis_id', id);
+        const tgl = new Date(s.created_at);
+        const total = (s.jasa_service + s.biaya_sparepart);
+        
+        document.getElementById('print-area').innerHTML = `
+            <center><h2>JE GARAGE PRO</h2><p>${tgl.toLocaleDateString()} ${tgl.toLocaleTimeString()}</p></center>
+            <hr>
+            <p>Unit: ${s.kendaraan.plat} (${s.kendaraan.pelanggan.nama})</p>
+            <hr>
+            <table width="100%">
+                <tr><td>Jasa</td><td align="right">Rp ${s.jasa_service.toLocaleString()}</td></tr>
+                ${d.map(i => `<tr><td>${i.stok_sparepart?.nama_barang || 'Part'}</td><td align="right">Rp ${(i.harga_satuan*i.jumlah).toLocaleString()}</td></tr>`).join('')}
+            </table>
+            <hr>
+            <b>TOTAL: Rp ${total.toLocaleString()}</b><br>
+            BAYAR: Rp ${s.uang_muka.toLocaleString()}<br>
+            SISA: Rp ${(total - s.uang_muka).toLocaleString()}
+        `;
+        window.print();
+    }
+
+    // Modal Global
+    function closeModal() { document.getElementById('modal-container').classList.add('hidden'); cart = []; }
+    document.getElementById('btn-close-modal').onclick = closeModal;
+    document.getElementById('btn-refresh').onclick = loadAll;
+    document.getElementById('btn-logout').onclick = () => { localStorage.removeItem('garage_session_v4'); location.reload(); };
+
+    // Auto Session
+    if(localStorage.getItem('garage_session_v4')) {
+        document.getElementById('login-screen').classList.add('hidden');
+        document.getElementById('dashboard-content').classList.remove('hidden');
+        loadAll();
+    }
+</script>
+</body>
+</html>
