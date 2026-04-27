@@ -1,0 +1,73 @@
+<div id="tab-finance" class="tab-content hidden">
+    <div class="flex gap-2 mb-6">
+        <select id="filter-finance" onchange="window.loadAll()" class="text-[10px] flex-1">
+            <option value="hari">Hari Ini</option>
+            <option value="bulan">Bulan Ini</option>
+            <option value="semua">Semua Waktu</option>
+        </select>
+        <button onclick="window.openModal('tambah_modal')" class="bg-emerald-600 px-3 rounded-xl text-[9px] font-bold uppercase border border-emerald-500 shadow-lg shadow-emerald-600/20">
+            + Modal
+        </button>
+        <button onclick="window.openModal('pengeluaran')" class="bg-red-600 px-3 rounded-xl text-[9px] font-bold uppercase border border-red-500 shadow-lg shadow-red-600/20">
+            Biaya
+        </button>
+        <button onclick="window.printFinancialReport()" class="bg-zinc-800 px-3 rounded-xl text-[9px] font-bold uppercase border border-zinc-700">
+            <i class="fa-solid fa-print"></i>
+        </button>
+    </div>
+    ```
+
+### Pembaruan Fungsi di dalam `<script>`:
+
+Silakan cari dan perbarui bagian `window.openModal` dan `window.printFinancialReport` dengan logika berikut:
+
+```javascript
+// 1. Tambahkan case baru di window.openModal
+if(type === 'tambah_modal') {
+    title.innerText = "Tambah Modal Laci";
+    body.innerHTML = `<input id="mod-ket" placeholder="Keterangan (ex: Modal Awal Hari)"><input id="mod-nom" type="number" placeholder="Nominal Modal (Rp)">`;
+    btn.onclick = async () => {
+        const nom = document.getElementById('mod-nom').value;
+        // Simpan sebagai nilai negatif di tabel pengeluaran agar menambah saldo
+        await supabase.from('pengeluaran').insert([{ 
+            keterangan: "[MODAL] " + document.getElementById('mod-ket').value, 
+            nominal: -Math.abs(nom) 
+        }]);
+        window.closeModal(); window.loadAll();
+    };
+}
+
+// 2. Perbarui tampilan list pengeluaran agar membedakan Modal vs Biaya
+// Cari bagian rendering filteredEx di window.loadAll()
+document.getElementById('table-expense-body').innerHTML = filteredEx.map(x => {
+    const isModal = x.nominal < 0;
+    return `<div class="flex justify-between items-center border-b border-zinc-900 pb-3">
+        <div>
+            <p class="text-xs font-bold ${isModal ? 'text-emerald-500' : ''}">${x.keterangan}</p>
+            <p class="text-[8px] text-zinc-600">${new Date(x.created_at).toLocaleDateString()}</p>
+        </div>
+        <div class="flex items-center gap-2">
+            <p class="text-xs font-black ${isModal ? 'text-emerald-500' : 'text-red-500'}">
+                ${isModal ? '+' : '-'} Rp ${Math.abs(x.nominal).toLocaleString()}
+            </p>
+            <button onclick="window.hapus('pengeluaran','${x.id}')" class="text-zinc-800 text-[10px]"><i class="fa-solid fa-trash"></i></button>
+        </div>
+    </div>`;
+}).join('');
+
+// 3. Perbarui window.printFinancialReport agar Modal muncul sebagai penambah saldo
+window.printFinancialReport = () => {
+    // ... (ambil data filter seperti v7.1) ...
+    let totalIn = 0; // Dari Servis
+    let totalOut = 0; // Biaya Murni
+    let totalModal = 0; // Injeksi Kas
+
+    filteredEx.forEach(x => {
+        if(x.nominal < 0) totalModal += Math.abs(x.nominal);
+        else totalOut += parseInt(x.nominal);
+    });
+
+    // Ringkasan di akhir laporan
+    const saldoAkhir = (totalIn + totalModal) - totalOut;
+    // ... tampilkan di tabel Ringkasan Saldo di bagian bawah laporan ...
+}
