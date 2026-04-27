@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Garage Pro v8.1</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.6.0/css/all.min.css">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;700;800&display=swap');
+        body { font-family: 'Plus Jakarta Sans', sans-serif; background: #000; color: #fff; margin: 0; }
+        .orange-gradient { background: linear-gradient(135deg, #f97316 0%, #ea580c 100%); }
+        .card-dark { background: #111; border: 1px solid #222; border-radius: 1.5rem; padding: 1.25rem; }
+        .tab { opacity: 0.4; cursor: pointer; padding-bottom: 8px; font-weight: 800; text-transform: uppercase; font-size: 10px; }
+        .tab.active { opacity: 1; border-bottom: 2px solid #f97316; color: #f97316; }
+        input, select { background: #1a1a1a !important; color: #fff !important; border: 1px solid #333 !important; padding: 12px; border-radius: 10px; width: 100%; outline: none; margin-bottom: 10px; }
+        .hidden { display: none !important; }
+    </style>
+</head>
+<body class="pb-20">
+
+<div id="login-screen" class="fixed inset-0 bg-black z-[999] flex flex-col items-center justify-center p-6">
+    <div class="w-16 h-16 bg-orange-500 rounded-2xl flex items-center justify-center mb-4"><i class="fa-solid fa-screwdriver-wrench text-2xl"></i></div>
+    <h2 class="text-xl font-black text-orange-500 italic mb-6">GARAGE PRO v8.1</h2>
+    <input type="password" id="pass-input" placeholder="Masukkan Password" class="max-w-xs text-center font-bold tracking-widest">
+    <button onclick="checkAuth()" class="orange-gradient w-full max-w-xs py-4 rounded-xl font-black uppercase text-xs">Masuk Sekarang</button>
+</div>
+
+<div id="main-app" class="hidden p-4 max-w-md mx-auto">
+    <header class="flex justify-between items-center mb-6">
+        <h1 class="text-orange-500 font-black italic uppercase">Je Garage</h1>
+        <div class="flex gap-2">
+            <button onclick="fetchAllData()" class="w-10 h-10 bg-zinc-900 rounded-xl text-orange-500 border border-zinc-800"><i class="fa-solid fa-sync"></i></button>
+            <button onclick="logout()" class="w-10 h-10 bg-zinc-900 rounded-xl text-red-500 border border-zinc-800"><i class="fa-solid fa-power-off"></i></button>
+        </div>
+    </header>
+
+    <nav class="flex gap-4 border-b border-zinc-900 mb-6 overflow-x-auto no-scrollbar">
+        <div id="t-db" class="tab active" onclick="switchTab('db')">Database</div>
+        <div id="t-ws" class="tab" onclick="switchTab('ws')">Workshop</div>
+        <div id="t-st" class="tab" onclick="switchTab('st')">Gudang</div>
+        <div id="t-fn" class="tab" onclick="switchTab('fn')">Laporan</div>
+    </nav>
+
+    <div id="sec-db" class="tab-content">
+        <button onclick="openModal('Pelanggan')" class="orange-gradient w-full py-4 rounded-xl font-black text-[10px] uppercase mb-4">+ Pelanggan</button>
+        <div id="list-pelanggan" class="space-y-2 mb-6"></div>
+        <hr class="border-zinc-900 mb-6">
+        <button onclick="openModal('Unit')" class="bg-zinc-800 w-full py-4 rounded-xl font-black text-[10px] uppercase mb-4 border border-zinc-700">+ Unit Mobil</button>
+        <div id="list-unit" class="space-y-2"></div>
+    </div>
+
+    <div id="sec-ws" class="tab-content hidden">
+        <div id="list-workshop" class="space-y-4"></div>
+    </div>
+
+    <div id="sec-st" class="tab-content hidden">
+        <button onclick="openModal('Stok')" class="bg-blue-600 w-full py-4 rounded-xl font-black text-[10px] uppercase mb-4">+ Stok Barang</button>
+        <div id="list-stok" class="grid grid-cols-2 gap-3"></div>
+    </div>
+
+    <div id="sec-fn" class="tab-content hidden">
+        <button onclick="openModal('Biaya')" class="bg-red-600 w-full py-4 rounded-xl font-black text-[10px] uppercase mb-4">Catat Pengeluaran</button>
+        <div id="finance-box" class="space-y-3"></div>
+    </div>
+</div>
+
+<div id="modal" class="fixed inset-0 bg-black/90 hidden flex items-center justify-center p-4 z-[1000]">
+    <div class="bg-zinc-900 w-full max-w-sm p-6 rounded-3xl border border-zinc-800">
+        <h3 id="m-title" class="text-orange-500 font-black mb-4 uppercase italic"></h3>
+        <div id="m-body" class="space-y-3"></div>
+        <div class="flex flex-col gap-2 mt-6">
+            <button id="m-btn-save" class="orange-gradient py-4 rounded-xl font-black text-xs">SIMPAN DATA</button>
+            <button onclick="closeModal()" class="text-zinc-500 font-bold py-2">Batal</button>
+        </div>
+    </div>
+</div>
+
+<script type="module">
+    import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm"
+    const SB_URL = "https://lxbfgnobjaqxojggjonh.supabase.co";
+    const SB_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imx4YmZnbm9iamFxeG9qZ2dqb25oIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzY0MjIxMDUsImV4cCI6MjA5MTk5ODEwNX0.GbY962sK8VFCShqlvW7olRnWtJMkLlr3f1NuSc2kV6E";
+    const supabase = createClient(SB_URL, SB_KEY);
+
+    window.checkAuth = () => {
+        if(document.getElementById('pass-input').value === 'cuma123') {
+            document.getElementById('login-screen').classList.add('hidden');
+            document.getElementById('main-app').classList.remove('hidden');
+            fetchAllData();
+        } else { alert("Password Salah!"); }
+    };
+
+    window.switchTab = (target) => {
+        document.querySelectorAll('.tab-content').forEach(c => c.classList.add('hidden'));
+        document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+        document.getElementById('sec-' + target).classList.remove('hidden');
+        document.getElementById('t-' + target).classList.add('active');
+    };
+
+    window.fetchAllData = async () => {
+        const { data: p } = await supabase.from('pelanggan').select('*').order('nama');
+        const { data: k } = await supabase.from('kendaraan').select('*, pelanggan(*)').order('created_at', {ascending: false});
+        const { data: st } = await supabase.from('stok_sparepart').select('*').order('nama_barang');
+        const { data: s } = await supabase.from('servis').select('*, kendaraan(*, pelanggan(*))').order('created_at', {ascending: false});
+        const { data: ex } = await supabase.from('pengeluaran').select('*').order('created_at', {ascending: false});
+
+        // Render Pelanggan
+        document.getElementById('list-pelanggan').innerHTML = p?.map(i => `<div class="bg-zinc-900 p-3 rounded-lg flex justify-between"><span>${i.nama}</span><button onclick="hapus('pelanggan','${i.id}')" class="text-zinc-700">Hapus</button></div>`).join('') || '';
+        
+        // Render Unit
+        document.getElementById('list-unit').innerHTML = k?.map(i => `<div class="bg-zinc-800/40 p-3 rounded-lg flex justify-between"><div><p class="text-orange-500 font-bold">${i.plat}</p><p class="text-[9px] opacity-40">${i.pelanggan?.nama}</p></div><button onclick="openServis('${i.id}','${i.plat}')" class="orange-gradient px-3 rounded font-bold text-[10px]">SERVIS</button></div>`).join('') || '';
+
+        // Render Gudang
+        document.getElementById('list-stok').innerHTML = st?.map(i => `<div class="bg-zinc-900 p-4 rounded-xl border-l-4 ${i.jumlah_stok <= 5 ? 'border-red-600' : 'border-blue-600'}"><p class="text-[9px] opacity-40 uppercase">${i.nama_barang}</p><p class="text-lg font-black">${i.jumlah_stok}</p></div>`).join('') || '';
+
+        // Render Workshop
+        document.getElementById('list-workshop').innerHTML = s?.map(x => {
+            const tagihan = (x.jasa_service + x.biaya_sparepart) - x.uang_muka;
+            return `<div class="bg-zinc-900 p-4 rounded-2xl border border-zinc-800"><div class="flex justify-between"><b>${x.kendaraan?.plat}</b><span class="text-[10px] text-zinc-500">${x.kendaraan?.pelanggan?.nama}</span></div><div class="mt-3 flex justify-between items-center">${tagihan > 0 ? `<button onclick="bayar('${x.id}',${tagihan})" class="bg-red-600 px-3 py-1 rounded text-[10px] font-bold">LUNASI</button>` : '<span class="text-emerald-500 text-[10px] font-bold">LUNAS</span>'}<p class="font-bold text-sm">Rp ${tagihan.toLocaleString()}</p></div></div>`;
+        }).join('') || '';
+
+        // Render Finance Simple
+        let tunai = 0, keluar = 0;
+        s?.forEach(item => { if(item.metode_bayar === 'Tunai') tunai += Number(item.uang_muka); });
+        ex?.forEach(item => { keluar += Number(item.nominal); });
+        document.getElementById('finance-box').innerHTML = `<div class="bg-emerald-600/10 p-4 rounded-xl border border-emerald-600/20"><p class="text-[10px] uppercase">Kas Laci</p><p class="text-xl font-black">Rp ${tunai.toLocaleString()}</p></div><div class="bg-red-600/10 p-4 rounded-xl border border-red-600/20"><p class="text-[10px] uppercase">Pengeluaran</p><p class="text-xl font-black text-red-500">Rp ${keluar.toLocaleString()}</p></div><div class="p-4 bg-zinc-900 rounded-xl text-center"><p class="text-[10px] uppercase opacity-40">Saldo Bersih</p><p class="text-2xl font-black text-emerald-500">Rp ${(tunai - keluar).toLocaleString()}</p></div>`;
+    };
+
+    window.openModal = (type) => {
+        const m = document.getElementById('modal');
+        const title = document.getElementById('m-title');
+        const body = document.getElementById('m-body');
+        const save = document.getElementById('m-btn-save');
+        m.classList.remove('hidden');
+        title.innerText = "TAMBAH " + type;
+
+        if(type === 'Pelanggan') {
+            body.innerHTML = `<input id="v1" placeholder="Nama Pelanggan">`;
+            save.onclick = async () => { await supabase.from('pelanggan').insert([{ nama: document.getElementById('v1').value }]); closeModal(); fetchAllData(); };
+        } else if(type === 'Unit') {
+            body.innerHTML = `<input id="v1" placeholder="Nama Pemilik"><input id="v2" placeholder="Plat Nomor" class="uppercase">`;
+            save.onclick = async () => { 
+                const { data: p } = await supabase.from('pelanggan').insert([{ nama: document.getElementById('v1').value }]).select().single();
+                await supabase.from('kendaraan').insert([{ pelanggan_id: p.id, plat: document.getElementById('v2').value.toUpperCase() }]);
+                closeModal(); fetchAllData();
+            };
+        } else if(type === 'Biaya') {
+            body.innerHTML = `<input id="v1" placeholder="Keterangan"><input id="v2" type="number" placeholder="Nominal (Rp)">`;
+            save.onclick = async () => { await supabase.from('pengeluaran').insert([{ keterangan: document.getElementById('v1').value, nominal: document.getElementById('v2').value }]); closeModal(); fetchAllData(); };
+        }
+    };
+
+    window.openServis = (id, plat) => {
+        document.getElementById('m-title').innerText = "SERVIS: " + plat;
+        document.getElementById('m-body').innerHTML = `<input id="v1" placeholder="Keluhan"><input id="v2" type="number" placeholder="Jasa (Rp)"><input id="v3" type="number" placeholder="Bayar Sekarang (Rp)"><select id="v4"><option value="Tunai">Tunai</option><option value="Transfer">Transfer</option></select>`;
+        document.getElementById('modal').classList.remove('hidden');
+        document.getElementById('m-btn-save').onclick = async () => {
+            await supabase.from('servis').insert([{ kendaraan_id: id, keluhan: document.getElementById('v1').value, jasa_service: document.getElementById('v2').value || 0, uang_muka: document.getElementById('v3').value || 0, metode_bayar: document.getElementById('v4').value }]);
+            closeModal(); fetchAllData();
+        };
+    };
+
+    window.bayar = async (id, sisa) => {
+        const bayar = prompt("Masukkan Nominal Pelunasan:", sisa);
+        if(bayar) {
+            const { data: old } = await supabase.from('servis').select('uang_muka').eq('id', id).single();
+            await supabase.from('servis').update({ uang_muka: Number(old.uang_muka) + Number(bayar) }).eq('id', id);
+            fetchAllData();
+        }
+    };
+
+    window.closeModal = () => document.getElementById('modal').classList.add('hidden');
+    window.hapus = async (tab, id) => { if(confirm("Hapus?")) { await supabase.from(tab).delete().eq('id', id); fetchAllData(); } };
+    window.logout = () => location.reload();
+</script>
+</body>
+</html>
