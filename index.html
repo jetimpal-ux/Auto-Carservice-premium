@@ -1,0 +1,509 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Garage Pro v7.9 - Audited Stable</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.6.0/css/all.min.css">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700;800&display=swap');
+        body { font-family: 'Plus Jakarta Sans', sans-serif; background: #050505; color: #fff; margin: 0; -webkit-tap-highlight-color: transparent; }
+        .orange-gradient { background: linear-gradient(135deg, #f97316 0%, #ea580c 100%); }
+        .card-dark { background: rgba(30, 30, 30, 0.6); backdrop-filter: blur(10px); border: 1px solid rgba(255,255,255,0.05); }
+        .tab.active { color: #f97316; border-bottom: 3px solid #f97316; opacity: 1; }
+        .tab { opacity: 0.4; cursor: pointer; padding-bottom: 10px; font-weight: 800; text-transform: uppercase; font-size: 11px; }
+        input, select { background: rgba(40, 40, 40, 0.9) !important; color: white !important; border: 1px solid #333 !important; padding: 14px; border-radius: 12px; width: 100%; outline: none; }
+        .hidden { display: none !important; }
+        #login-screen { position: fixed; inset: 0; background: #000; z-index: 5000; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 20px; }
+        @media print { #dashboard-content, #modal-container, #login-screen, nav, header { display: none !important; } #print-area { display: block !important; color: black !important; } }
+    </style>
+</head>
+<body class="pb-24">
+
+<div id="login-screen">
+    <div class="w-16 h-16 bg-orange-500 rounded-2xl flex items-center justify-center mb-6 shadow-2xl"><i class="fa-solid fa-screwdriver-wrench text-white text-2xl"></i></div>
+    <h2 class="text-xl font-black text-orange-500 uppercase italic mb-8 text-center">Garage Pro<br><span class="text-white text-[10px] tracking-[0.3em]">SECURITY ACCESS</span></h2>
+    <div class="w-full max-w-xs space-y-4">
+        <input type="password" id="pass-input" placeholder="••••••" class="text-center font-bold tracking-widest">
+        <button id="btn-login-final" class="orange-gradient w-full py-4 rounded-xl font-black text-xs uppercase tracking-widest">Otorisasi</button>
+    </div>
+</div>
+
+<div id="print-area" class="hidden p-4"></div>
+
+<div id="dashboard-content" class="hidden max-w-4xl mx-auto p-4">
+    <header class="flex justify-between items-center mb-8">
+        <div class="flex items-center gap-3">
+            <div class="w-12 h-12 bg-orange-500 rounded-2xl flex items-center justify-center"><i class="fa-solid fa-car-side text-white text-2xl"></i></div>
+            <div><h1 class="text-xl font-black italic text-orange-500 uppercase leading-none">Je Garage Pro</h1><p class="text-[8px] text-zinc-500 font-bold uppercase mt-1">Audit Edition v7.9</p></div>
+        </div>
+        <div class="flex gap-2">
+            <button id="btn-refresh" class="w-10 h-10 rounded-xl bg-zinc-900 border border-zinc-800 text-orange-500 flex items-center justify-center"><i class="fa-solid fa-sync"></i></button>
+            <button id="btn-logout" class="w-10 h-10 rounded-xl bg-zinc-900 border border-zinc-800 text-red-500 flex items-center justify-center"><i class="fa-solid fa-power-off"></i></button>
+        </div>
+    </header>
+
+    <nav class="flex gap-6 border-b border-zinc-900 mb-8 overflow-x-auto no-scrollbar">
+        <div data-tab="tab-database" class="tab active">Database</div>
+        <div data-tab="tab-servis" class="tab">Workshop</div>
+        <div data-tab="tab-stok" class="tab">Gudang</div>
+        <div data-tab="tab-finance" class="tab">Laporan</div>
+    </nav>
+
+    <div id="tab-database" class="tab-content">
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div class="card-dark p-5 rounded-[2rem] shadow-lg">
+                <button id="add-pelanggan" class="orange-gradient w-full py-4 rounded-2xl font-black mb-6 text-[10px] uppercase">+ Pelanggan Baru</button>
+                <div id="list-pelanggan" class="space-y-3"></div>
+            </div>
+            <div class="card-dark p-5 rounded-[2rem] shadow-lg">
+                <button id="add-unit" class="bg-zinc-800 w-full py-4 rounded-2xl font-black mb-6 text-[10px] uppercase border border-zinc-700">+ Unit Baru</button>
+                <div id="list-kendaraan" class="space-y-3"></div>
+            </div>
+        </div>
+    </div>
+
+    <div id="tab-servis" class="tab-content hidden">
+        <input type="text" id="search-ws" placeholder="Cari Plat atau Nama..." class="mb-6 text-xs italic">
+        <div id="list-workshop" class="space-y-4"></div>
+    </div>
+
+    <div id="tab-stok" class="tab-content hidden">
+        <button id="add-stok" class="bg-blue-600 w-full py-4 rounded-2xl font-black mb-6 text-[10px] uppercase tracking-widest">+ Stok Gudang</button>
+        <div class="grid grid-cols-2 gap-4" id="list-stok"></div>
+    </div>
+
+    <div id="tab-finance" class="tab-content hidden">
+        <div class="flex gap-3 mb-6">
+            <select id="filter-finance" class="text-xs flex-1"><option value="hari">Hari Ini</option><option value="bulan">Bulan Ini</option></select>
+            <button id="add-expense" class="bg-red-600 px-4 rounded-xl text-[10px] font-black uppercase italic">Catat Pengeluaran</button>
+        </div>
+        <div id="finance-stats" class="grid grid-cols-2 gap-3 mb-4"></div>
+        <div class="grid grid-cols-2 gap-3 mb-4" id="cash-summary"></div>
+        <div class="bg-red-600/10 p-4 rounded-2xl border border-red-600/20 mb-6" id="net-laci-box"></div>
+        <h4 class="text-[10px] font-black uppercase mb-4 opacity-30 italic">Detail Transaksi</h4>
+        <div id="table-finance-body" class="space-y-3"></div>
+    </div>
+</div>
+
+<div id="modal-container" class="fixed inset-0 bg-black/95 hidden flex items-center justify-center p-4 z-[6000] backdrop-blur-md">
+    <div class="card-dark w-full max-w-lg p-6 rounded-[2.5rem] shadow-2xl overflow-y-auto max-h-[90vh]">
+        <h3 id="modal-title" class="text-xl font-bold text-orange-500 mb-6 uppercase italic"></h3>
+        <div id="modal-body" class="space-y-4"></div>
+        <div class="flex flex-col gap-2 mt-8">
+            <button id="btn-execute-modal" class="orange-gradient py-4 rounded-xl font-black text-xs uppercase tracking-widest">Simpan Data</button>
+            <button id="btn-close-modal" class="bg-zinc-900 py-4 rounded-xl font-bold text-xs text-zinc-500 uppercase">Batal</button>
+        </div>
+    </div>
+</div>
+
+<script type="module">
+    import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm"
+    const SB_URL = "https://lxbfgnobjaqxojggjonh.supabase.co";
+    const SB_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVC9J.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imx4YmZnbm9iamFxeG9qZ2dqb25oIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzY0MjIxMDUsImV4cCI6MjA5MTk5ODEwNX0.GbY962sK8VFCShqlvW7olRnWtJMkLlr3f1NuSc2kV6E";
+    const supabase = createClient(SB_URL, SB_KEY);
+
+    const MASTER_PASS = "cuma123";
+    let keranjang = [];
+    let masterServis = [];
+    let masterPengeluaran = [];
+
+    // --- SINKRONISASI LOGIN ---
+    document.getElementById('btn-login-final').onclick = () => {
+        const input = document.getElementById('pass-input').value;
+        if(input === MASTER_PASS) {
+            localStorage.setItem('garage_v79_auth', 'true');
+            initApp();
+        } else {
+            alert('Password Salah!');
+        }
+    };
+
+    const initApp = () => {
+        if(localStorage.getItem('garage_v79_auth') === 'true') {
+            document.getElementById('login-screen').classList.add('hidden');
+            document.getElementById('dashboard-content').classList.remove('hidden');
+            window.loadAllData();
+        }
+    };
+
+    // --- DATA FETCHING (AUDITED) ---
+    window.loadAllData = async () => {
+        try {
+            // Mengambil data secara paralel namun tetap aman
+            const [pRes, kRes, sRes, stRes, exRes] = await Promise.all([
+                supabase.from('pelanggan').select('*').order('nama'),
+                supabase.from('kendaraan').select('*, pelanggan(*)').order('created_at', {ascending: false}),
+                supabase.from('servis').select('*, kendaraan(*, pelanggan(*))').order('created_at', {ascending: false}),
+                supabase.from('stok_sparepart').select('*').order('nama_barang'),
+                supabase.from('pengeluaran').select('*').order('created_at', {ascending: false})
+            ]);
+
+            // Render Pelanggan
+            const pList = document.getElementById('list-pelanggan');
+            if(pRes.data) {
+                pList.innerHTML = pRes.data.map(i => `
+                    <div class="bg-zinc-900/80 p-4 rounded-xl flex justify-between items-center">
+                        <span class="text-sm font-semibold">${i.nama}</span>
+                        <button onclick="window.hapusAction('pelanggan', '${i.id}')" class="text-zinc-800 hover:text-red-500"><i class="fa-solid fa-trash-can"></i></button>
+                    </div>`).join('');
+            }
+
+            // Render Unit Kendaraan
+            const kList = document.getElementById('list-kendaraan');
+            if(kRes.data) {
+                kList.innerHTML = kRes.data.map(i => `
+                    <div class="bg-zinc-800/40 p-4 rounded-xl flex justify-between items-center">
+                        <div>
+                            <p class="text-orange-500 font-black italic tracking-wider">${i.plat}</p>
+                            <p class="text-[9px] opacity-40 uppercase font-bold">${i.pelanggan?.nama || 'Tanpa Nama'}</p>
+                        </div>
+                        <button onclick="window.openFormServis('${i.id}', '${i.plat}')" class="orange-gradient px-3 py-1.5 rounded-lg text-[9px] font-black uppercase">Servis</button>
+                    </div>`).join('');
+            }
+
+            // Render Gudang
+            const stList = document.getElementById('list-stok');
+            if(stRes.data) {
+                stList.innerHTML = stRes.data.map(i => `
+                    <div class="card-dark p-4 rounded-2xl border-l-4 ${i.jumlah_stok <= 10 ? 'border-red-600' : 'border-blue-500'} flex justify-between items-center">
+                        <div>
+                            <p class="text-[9px] opacity-40 uppercase font-bold">${i.nama_barang}</p>
+                            <h4 class="text-lg font-black ${i.jumlah_stok <= 10 ? 'text-red-500' : 'text-white'}">${i.jumlah_stok}</h4>
+                        </div>
+                        <button onclick="window.hapusAction('stok_sparepart', '${i.id}')" class="text-zinc-800"><i class="fa-solid fa-trash-can"></i></button>
+                    </div>`).join('');
+            }
+
+            masterServis = sRes.data || [];
+            masterPengeluaran = exRes.data || [];
+            
+            renderWorkshopUI(masterServis);
+            renderFinanceUI();
+
+        } catch (e) {
+            console.error("Fetch Error:", e);
+        }
+    };
+
+    // --- WORKSHOP RENDER ---
+    const renderWorkshopUI = (data) => {
+        const wsList = document.getElementById('list-workshop');
+        wsList.innerHTML = data.map(x => {
+            const totalTagihan = (x.jasa_service || 0) + (x.biaya_sparepart || 0);
+            const sisaPiutang = totalTagihan - (x.uang_muka || 0);
+            const isLunas = sisaPiutang <= 0;
+
+            return `
+            <div class="card-dark p-5 rounded-3xl border-l-4 ${isLunas ? 'border-emerald-600' : 'border-red-600'}">
+                <div class="flex justify-between items-start">
+                    <div>
+                        <h3 class="text-lg font-black text-orange-500 italic tracking-tighter">${x.kendaraan?.plat || 'N/A'}</h3>
+                        <p class="text-[9px] opacity-40 uppercase font-black">${x.kendaraan?.pelanggan?.nama || 'Umum'}</p>
+                    </div>
+                    <div class="flex gap-4">
+                        <button onclick="window.hapusAction('servis', '${x.id}')" class="text-zinc-800"><i class="fa-solid fa-trash-can"></i></button>
+                        <button onclick="window.printNotaAction('${x.id}')" class="text-orange-500"><i class="fa-solid fa-print"></i></button>
+                    </div>
+                </div>
+                <div class="mt-4 flex justify-between items-end pt-3 border-t border-white/5">
+                    <div>
+                        ${!isLunas ? `<button onclick="window.openPelunasanForm('${x.id}', ${sisaPiutang})" class="bg-red-600 text-white px-4 py-1.5 rounded-lg text-[9px] font-black uppercase">Bayar Sisa</button>` : '<span class="text-emerald-500 text-[10px] font-black italic tracking-widest">LUNAS</span>'}
+                    </div>
+                    <div class="text-right">
+                        <p class="text-[8px] opacity-30 uppercase font-bold">Sisa Tagihan</p>
+                        <p class="font-black text-sm ${isLunas ? 'text-emerald-500' : 'text-red-500'}">Rp ${sisaPiutang.toLocaleString()}</p>
+                    </div>
+                </div>
+            </div>`;
+        }).join('');
+    };
+
+    // --- FINANCE RENDER (STRICT AUDIT) ---
+    const renderFinanceUI = () => {
+        const filter = document.getElementById('filter-finance').value;
+        const now = new Date();
+        
+        const filteredServis = masterServis.filter(x => {
+            const d = new Date(x.created_at);
+            return filter === 'hari' ? d.toDateString() === now.toDateString() : (d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear());
+        });
+
+        const filteredExp = masterPengeluaran.filter(x => {
+            const d = new Date(x.created_at);
+            return filter === 'hari' ? d.toDateString() === now.toDateString() : (d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear());
+        });
+
+        let tunaiMasuk = 0, transferMasuk = 0, totalPiutang = 0, totalKeluar = 0;
+
+        filteredServis.forEach(s => {
+            if(s.metode_bayar === 'Tunai') tunaiMasuk += Number(s.uang_muka || 0);
+            else transferMasuk += Number(s.uang_muka || 0);
+            totalPiutang += ((Number(s.jasa_service) + Number(s.biaya_sparepart)) - Number(s.uang_muka));
+        });
+
+        filteredExp.forEach(e => totalKeluar += Number(e.nominal || 0));
+
+        // Update Stats UI
+        document.getElementById('finance-stats').innerHTML = `
+            <div class="card-dark p-4 rounded-2xl border-l-4 border-emerald-500">
+                <p class="text-[9px] opacity-40 uppercase font-bold">Total Masuk</p>
+                <h2 class="text-emerald-500 font-black text-lg">Rp ${(tunaiMasuk+transferMasuk).toLocaleString()}</h2>
+            </div>
+            <div class="card-dark p-4 rounded-2xl border-l-4 border-red-500">
+                <p class="text-[9px] opacity-40 uppercase font-bold">Total Piutang</p>
+                <h2 class="text-red-500 font-black text-lg">Rp ${totalPiutang.toLocaleString()}</h2>
+            </div>`;
+
+        document.getElementById('cash-summary').innerHTML = `
+            <div class="bg-zinc-900/50 p-3 rounded-xl border border-zinc-800">
+                <p class="text-[8px] opacity-50 uppercase font-black">💵 Tunai (Laci)</p>
+                <p class="font-bold text-xs">Rp ${tunaiMasuk.toLocaleString()}</p>
+            </div>
+            <div class="bg-zinc-900/50 p-3 rounded-xl border border-zinc-800">
+                <p class="text-[8px] opacity-50 uppercase font-black">📱 Transfer/QRIS</p>
+                <p class="font-bold text-xs">Rp ${transferMasuk.toLocaleString()}</p>
+            </div>`;
+
+        document.getElementById('net-laci-box').innerHTML = `
+            <div class="flex justify-between items-center">
+                <p class="text-[10px] font-black text-red-500 uppercase">Pengeluaran Operasional</p>
+                <p class="font-bold text-red-500">Rp ${totalKeluar.toLocaleString()}</p>
+            </div>
+            <div class="flex justify-between items-center mt-2 pt-2 border-t border-red-600/10">
+                <p class="text-[10px] font-black text-emerald-500 uppercase tracking-widest">Sisa Saldo Laci</p>
+                <p class="font-bold text-emerald-500 text-lg">Rp ${(tunaiMasuk - totalKeluar).toLocaleString()}</p>
+            </div>`;
+
+        const logCombined = [
+            ...filteredServis.map(s => ({...s, entryType: 'IN'})),
+            ...filteredExp.map(e => ({...e, entryType: 'OUT'}))
+        ].sort((a,b) => new Date(b.created_at) - new Date(a.created_at));
+
+        document.getElementById('table-finance-body').innerHTML = logCombined.map(x => `
+            <div class="bg-zinc-900/40 p-4 rounded-xl flex justify-between items-center">
+                <div>
+                    <p class="font-bold text-[11px] tracking-tight">${x.entryType === 'IN' ? (x.kendaraan?.plat || 'UMUM') : x.keterangan}</p>
+                    <p class="text-[8px] uppercase font-black ${x.entryType === 'IN' ? 'text-emerald-500' : 'text-red-500'}">
+                        ${x.entryType === 'IN' ? x.metode_bayar : 'Pengeluaran'}
+                    </p>
+                </div>
+                <p class="font-bold text-xs ${x.entryType === 'IN' ? 'text-white' : 'text-red-500'}">
+                    ${x.entryType === 'OUT' ? '-' : ''} Rp ${(x.uang_muka || x.nominal).toLocaleString()}
+                </p>
+            </div>`).join('');
+    };
+
+    // --- WORKSHOP INPUT LOGIC ---
+    window.openFormServis = async (uid, plat) => {
+        keranjang = [];
+        const { data: listPart } = await supabase.from('stok_sparepart').select('*').order('nama_barang');
+        
+        document.getElementById('modal-title').innerText = "INPUT SERVIS: " + plat;
+        document.getElementById('modal-body').innerHTML = `
+            <input id="f-keluhan" placeholder="Nama Pekerjaan (Contoh: Ganti Oli)">
+            <input id="f-jasa" type="number" placeholder="Biaya Jasa (Rp)">
+            <div class="bg-black/40 p-4 rounded-2xl border border-zinc-800">
+                <p id="f-alert" class="text-[9px] text-red-500 font-black uppercase mb-2 hidden"></p>
+                <div class="flex gap-2">
+                    <select id="f-part-select" class="text-[10px]" onchange="window.cekStokModal(this)">
+                        <option value="">-- Pilih Sparepart --</option>
+                        ${listPart.map(p => `<option value="${p.id}" data-px="${p.harga_jual_satuan}" data-sx="${p.jumlah_stok}">${p.nama_barang} (Sisa: ${p.jumlah_stok})</option>`).join('')}
+                    </select>
+                    <button onclick="window.addPartToCart()" class="bg-blue-600 px-4 rounded-xl font-bold">+</button>
+                </div>
+                <div id="f-cart-list" class="mt-3 space-y-1"></div>
+            </div>
+            <input id="f-bayar" type="number" placeholder="Nominal Bayar Sekarang (Rp)">
+            <select id="f-metode">
+                <option value="Tunai">Tunai (Masuk Laci)</option>
+                <option value="Transfer">Transfer / Bank</option>
+            </select>`;
+        
+        document.getElementById('modal-container').classList.remove('hidden');
+        document.getElementById('btn-execute-modal').onclick = async () => {
+            const btn = document.getElementById('btn-execute-modal');
+            btn.disabled = true; btn.innerText = "PROSES...";
+
+            const biayaPart = keranjang.reduce((a, b) => a + (b.harga * b.qty), 0);
+            const { data: sNew, error: sErr } = await supabase.from('servis').insert([{
+                kendaraan_id: uid,
+                keluhan: document.getElementById('f-keluhan').value,
+                jasa_service: document.getElementById('f-jasa').value || 0,
+                biaya_sparepart: biayaPart,
+                uang_muka: document.getElementById('f-bayar').value || 0,
+                metode_bayar: document.getElementById('f-metode').value
+            }]).select().single();
+
+            if(!sErr && sNew) {
+                for(const item of keranjang) {
+                    await supabase.from('detail_servis').insert([{ servis_id: sNew.id, stok_id: item.stok_id, jumlah: 1, harga_satuan: item.harga }]);
+                    const { data: partData } = await supabase.from('stok_sparepart').select('jumlah_stok').eq('id', item.stok_id).single();
+                    await supabase.from('stok_sparepart').update({ jumlah_stok: (partData.jumlah_stok - 1) }).eq('id', item.stok_id);
+                }
+            }
+            window.closeModalAction();
+            window.loadAllData();
+        };
+    };
+
+    window.cekStokModal = (el) => {
+        const opt = el.selectedOptions[0];
+        const sisa = Number(opt.dataset.sx);
+        const alertBox = document.getElementById('f-alert');
+        if(sisa <= 10 && opt.value) {
+            alertBox.classList.remove('hidden');
+            alertBox.innerText = `⚠️ STOK KRITIS: SISA ${sisa}`;
+        } else alertBox.classList.add('hidden');
+    };
+
+    window.addPartToCart = () => {
+        const sel = document.getElementById('f-part-select');
+        const opt = sel.selectedOptions[0];
+        if(!opt.value) return;
+        keranjang.push({ stok_id: opt.value, nama: opt.text.split(' (')[0], harga: Number(opt.dataset.px), qty: 1 });
+        document.getElementById('f-cart-list').innerHTML = keranjang.map(x => `
+            <div class="flex justify-between text-[10px] bg-white/5 p-2 rounded-lg border border-white/5">
+                <span>${x.nama}</span>
+                <span class="font-bold">Rp ${x.harga.toLocaleString()}</span>
+            </div>`).join('');
+    };
+
+    // --- PELUNASAN & PENGELUARAN ---
+    window.openPelunasanForm = (sid, sisa) => {
+        document.getElementById('modal-title').innerText = "PELUNASAN TAGIHAN";
+        document.getElementById('modal-body').innerHTML = `
+            <div class="p-4 bg-red-600/20 rounded-2xl text-center mb-4">
+                <p class="text-[10px] uppercase font-black opacity-50">Sisa Hutang</p>
+                <p class="text-xl font-black text-red-500">Rp ${sisa.toLocaleString()}</p>
+            </div>
+            <input id="p-nominal" type="number" placeholder="Nominal yang dibayar (Rp)">
+            <select id="p-metode">
+                <option value="Tunai">Tunai (Laci)</option>
+                <option value="Transfer">Transfer / Bank</option>
+            </select>`;
+        document.getElementById('modal-container').classList.remove('hidden');
+        document.getElementById('btn-execute-modal').onclick = async () => {
+            const { data: old } = await supabase.from('servis').select('uang_muka').eq('id', sid).single();
+            const totalBaru = Number(old.uang_muka) + Number(document.getElementById('p-nominal').value || 0);
+            await supabase.from('servis').update({ uang_muka: totalBaru, metode_bayar: document.getElementById('p-metode').value }).eq('id', sid);
+            window.closeModalAction();
+            window.loadAllData();
+        };
+    };
+
+    document.getElementById('add-expense').onclick = () => {
+        document.getElementById('modal-title').innerText = "CATAT PENGELUARAN";
+        document.getElementById('modal-body').innerHTML = `
+            <input id="ex-desc" placeholder="Keterangan (Contoh: Listrik, Kopi, Bensin)">
+            <input id="ex-val" type="number" placeholder="Nominal (Rp)">`;
+        document.getElementById('modal-container').classList.remove('hidden');
+        document.getElementById('btn-execute-modal').onclick = async () => {
+            await supabase.from('pengeluaran').insert([{ keterangan: document.getElementById('ex-desc').value, nominal: Number(document.getElementById('ex-val').value) }]);
+            window.closeModalAction();
+            window.loadAllData();
+        };
+    };
+
+    // --- TAB SYSTEM ---
+    document.querySelectorAll('.tab').forEach(t => {
+        t.onclick = () => {
+            document.querySelectorAll('.tab-content').forEach(c => c.classList.add('hidden'));
+            document.querySelectorAll('.tab').forEach(x => x.classList.remove('active'));
+            document.getElementById(t.dataset.tab).classList.remove('hidden');
+            t.classList.add('active');
+        };
+    });
+
+    // --- SEARCH WORKSHOP ---
+    document.getElementById('search-ws').oninput = (e) => {
+        const query = e.target.value.toLowerCase();
+        const filtered = masterServis.filter(x => 
+            (x.kendaraan?.plat || '').toLowerCase().includes(query) || 
+            (x.kendaraan?.pelanggan?.nama || '').toLowerCase().includes(query)
+        );
+        renderWorkshopUI(filtered);
+    };
+
+    // --- ADD DATABASE ACTIONS ---
+    document.getElementById('add-pelanggan').onclick = () => {
+        document.getElementById('modal-title').innerText = "PELANGGAN BARU";
+        document.getElementById('modal-body').innerHTML = `<input id="db-p-nama" placeholder="Nama Lengkap">`;
+        document.getElementById('modal-container').classList.remove('hidden');
+        document.getElementById('btn-execute-modal').onclick = async () => {
+            await supabase.from('pelanggan').insert([{ nama: document.getElementById('db-p-nama').value }]);
+            window.closeModalAction(); window.loadAllData();
+        };
+    };
+
+    document.getElementById('add-unit').onclick = async () => {
+        const { data: pList } = await supabase.from('pelanggan').select('*').order('nama');
+        document.getElementById('modal-title').innerText = "UNIT BARU";
+        document.getElementById('modal-body').innerHTML = `
+            <select id="db-u-pel">${pList.map(p => `<option value="${p.id}">${p.nama}</option>`).join('')}</select>
+            <input id="db-u-plat" class="uppercase" placeholder="Nomor Plat">`;
+        document.getElementById('modal-container').classList.remove('hidden');
+        document.getElementById('btn-execute-modal').onclick = async () => {
+            await supabase.from('kendaraan').insert([{ pelanggan_id: document.getElementById('db-u-pel').value, plat: document.getElementById('db-u-plat').value.toUpperCase() }]);
+            window.closeModalAction(); window.loadAllData();
+        };
+    };
+
+    document.getElementById('add-stok').onclick = () => {
+        document.getElementById('modal-title').innerText = "STOK BARU";
+        document.getElementById('modal-body').innerHTML = `
+            <input id="db-s-nama" placeholder="Nama Sparepart">
+            <input id="db-s-harga" type="number" placeholder="Harga Jual Satuan">
+            <input id="db-s-qty" type="number" placeholder="Jumlah Stok">`;
+        document.getElementById('modal-container').classList.remove('hidden');
+        document.getElementById('btn-execute-modal').onclick = async () => {
+            await supabase.from('stok_sparepart').insert([{ nama_barang: document.getElementById('db-s-nama').value, harga_jual_satuan: document.getElementById('db-s-harga').value, jumlah_stok: document.getElementById('db-s-qty').value }]);
+            window.closeModalAction(); window.loadAllData();
+        };
+    };
+
+    // --- GLOBAL UTILS ---
+    window.hapusAction = async (tabel, id) => {
+        if(confirm('Hapus data secara permanen?')) {
+            await supabase.from(tabel).delete().eq('id', id);
+            window.loadAllData();
+        }
+    };
+
+    window.printNotaAction = async (id) => {
+        const { data: s } = await supabase.from('servis').select('*, kendaraan(*, pelanggan(*))').eq('id', id).single();
+        const { data: d } = await supabase.from('detail_servis').select('*, stok_sparepart(nama_barang)').eq('servis_id', id);
+        const t = new Date(s.created_at);
+        const total = (Number(s.jasa_service) + Number(s.biaya_sparepart));
+        
+        document.getElementById('print-area').innerHTML = `
+            <center><h2 style="margin:0">JE GARAGE PRO</h2><p style="font-size:10px">${t.toLocaleString('id-ID')}</p></center>
+            <hr>
+            <pre style="font-family:monospace;font-size:12px">
+Unit   : ${s.kendaraan.plat}
+Pemilik: ${s.kendaraan.pelanggan.nama}
+--------------------------------
+${d.map(i => `${(i.stok_sparepart?.nama_barang || 'Part').padEnd(15)} Rp${i.harga_satuan.toLocaleString().padStart(10)}`).join('\n')}
+Jasa            Rp${s.jasa_service.toLocaleString().padStart(10)}
+--------------------------------
+TOTAL           Rp${total.toLocaleString().padStart(10)}
+BAYAR           Rp${s.uang_muka.toLocaleString().padStart(10)}
+SISA            Rp${(total - s.uang_muka).toLocaleString().padStart(10)}
+--------------------------------
+METODE: ${s.metode_bayar.toUpperCase()}
+            </pre>`;
+        window.print();
+    };
+
+    window.closeModalAction = () => document.getElementById('modal-container').classList.add('hidden');
+    document.getElementById('btn-close-modal').onclick = window.closeModalAction;
+    document.getElementById('btn-refresh').onclick = () => window.loadAllData();
+    document.getElementById('filter-finance').onchange = () => renderFinanceUI();
+    document.getElementById('btn-logout').onclick = () => { localStorage.removeItem('garage_v79_auth'); location.reload(); };
+
+    // STARTUP
+    initApp();
+</script>
+</body>
+</html>
