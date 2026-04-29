@@ -32,7 +32,7 @@
 <body class="pb-24">
 
 <div id="login-screen" class="fixed inset-0 bg-[#050505] z-[1000] flex flex-col items-center justify-center p-6">
-    <h2 class="text-xl font-black text-orange-500 uppercase italic mb-8"><i class="fa-solid fa-screwdriver-wrench mr-1">Je Garage Pro</h2>
+    <h2 class="text-xl font-black text-orange-500 uppercase italic mb-8">Je Garage Pro</h2>
     <input type="password" id="pass-input" placeholder="PASSWORD" class="text-center font-bold tracking-[0.5em] max-w-xs mb-4">
     <button onclick="window.eksekusiLogin()" class="orange-gradient w-full max-w-xs py-4 rounded-xl font-black text-xs uppercase shadow-lg">Login</button>
 </div>
@@ -60,8 +60,8 @@
 
     <div id="tab-database" class="tab-content">
         <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div class="card-dark p-5 rounded-[2rem]"><button onclick="window.openModal('pelanggan')" class="orange-gradient w-full py-4 rounded-2xl font-black mb-6 text-[10px] uppercase shadow-lg"><i class="fa-solid fa-user-plus mr-2"></i>+ Pelanggan</button><div id="list-pelanggan" class="space-y-3 max-h-[300px] overflow-y-auto"></div></div>
-            <div class="card-dark p-5 rounded-[2rem]"><button onclick="window.openModal('kendaraan')" class="bg-zinc-800 w-full py-4 rounded-2xl font-black mb-6 text-[10px] uppercase border border-zinc-700"><i class="fa-solid fa-care mr-1"></i>+ Unit Baru</button><div id="list-kendaraan" class="space-y-3 max-h-[300px] overflow-y-auto"></div></div>
+            <div class="card-dark p-5 rounded-[2rem]"><button onclick="window.openModal('pelanggan')" class="orange-gradient w-full py-4 rounded-2xl font-black mb-6 text-[10px] uppercase shadow-lg">+ Pelanggan</button><div id="list-pelanggan" class="space-y-3 max-h-[300px] overflow-y-auto"></div></div>
+            <div class="card-dark p-5 rounded-[2rem]"><button onclick="window.openModal('kendaraan')" class="bg-zinc-800 w-full py-4 rounded-2xl font-black mb-6 text-[10px] uppercase border border-zinc-700">+ Unit Baru</button><div id="list-kendaraan" class="space-y-3 max-h-[300px] overflow-y-auto"></div></div>
         </div>
     </div>
 
@@ -70,7 +70,10 @@
         <div id="list-pro-workshop" class="space-y-4"></div>
     </div>
 
-  
+    <div id="tab-stok" class="tab-content hidden">
+        
+    </div>
+
     <div id="tab-finance" class="tab-content hidden">
         <div class="flex gap-2 mb-6">
             <select id="filter-finance" onchange="window.loadAll()" class="text-[10px] flex-1"><option value="hari">Hari Ini</option><option value="bulan">Bulan Ini</option><option value="semua">Semua</option></select>
@@ -241,10 +244,10 @@
 
     window.updateSpareArea = async (m) => {
         const a = document.getElementById('spare-area');
-        if(m) { a.innerHTML=`<input id="m-n" placeholder="Part Luar"><input id="m-h" type="number" placeholder="Harga"><button onclick="window.addM()" class="w-full orange-gradient py-2 rounded-lg mt-2 text-[11px] font-bold">Add Manual</button><button onclick="window.updateSpareArea(false)" class="text-[10px] text-blue-400 mt-2 block">Cek Stok Gudang</button>`; }
+        if(m) { a.innerHTML=`<input id="m-n" placeholder="Part Luar"><input id="m-h" type="number" placeholder="Harga"><button onclick="window.addM()" class="w-full orange-gradient py-2 rounded-lg mt-2 text-[10px] font-bold">Add Manual</button><button onclick="window.updateSpareArea(false)" class="text-[8px] text-blue-400 mt-2 block">Cek Stok Gudang</button>`; }
         else {
             const {data:st}=await supabase.from('stok_sparepart').select('*');
-            a.innerHTML=`<select id="v-sp">${st.map(x=>`<option value="${x.id}" data-h="${x.harga_jual_satuan}">${x.nama_barang} (${x.jumlah_stok})</option>`).join('')}</select><input id="v-q" type="number" value="1"><button onclick="window.addG()" class="w-full bg-blue-600 py-2 rounded-lg mt-2 text-[9px] font-bold">Add Part</button><button onclick="window.updateSpareArea(true)" class="text-[8px] text-orange-400 mt-2 block">+ Input Manual Part Luar</button>`;
+            a.innerHTML=`<select id="v-sp">${st.map(x=>`<option value="${x.id}" data-h="${x.harga_jual_satuan}">${x.nama_barang} (${x.jumlah_stok})</option>`).join('')}</select><input id="v-q" type="number" value="1"><button onclick="window.addG()" class="w-full bg-blue-600 py-2 rounded-lg mt-2 text-[10px] font-bold">Add Part</button><button onclick="window.updateSpareArea(true)" class="text-[8px] text-orange-400 mt-2 block">+ Input Manual Part Luar</button>`;
         }
     };
     window.addG=()=>{ const s=document.getElementById('v-sp').selectedOptions[0]; keranjang.push({stok_id:s.value, nama:s.text.split(' (')[0], harga:parseInt(s.dataset.h), qty:parseInt(document.getElementById('v-q').value)}); window.renderBsk(); window.calc(); };
