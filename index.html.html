@@ -8,7 +8,7 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.6.0/css/all.min.css">
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700;800&display=swap');
-        body { font-family: 'Plus Jakarta Sans', sans-serif; background: #050505; color: #fff; margin: 0; -webkit-tap-highlight-color: transparent; }
+        body { font-family: 'Plus Jakarta Sans', sans-serif; background: #01011d; color: #fff; margin: 0; -webkit-tap-highlight-color: transparent; }
         body::before { content: ""; position: fixed; inset: 0; background: url('https://i.postimg.cc/xCDV3vRZ/car-automobile-repair-shop-engine-motor-vehicle-service-maintenance-auto-parts-6c3120919a9a891118831.png') center/cover; opacity: 0.15; z-index: -1; }
         .orange-gradient { background: linear-gradient(135deg, #f97316 0%, #ea580c 100%); }
         .card-dark { background: rgba(20, 20, 20, 0.8); backdrop-filter: blur(15px); border: 1px solid rgba(255,255,255,0.1); }
@@ -28,10 +28,6 @@
             .print-title { text-align: center; font-weight: bold; margin-bottom: 15px; font-size: 12px; }
         }
     </style>
-<link rel="manifest" href="manifest.json">
-<meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<link rel="apple-touch-icon" href="https://i.postimg.cc/xCDV3vRZ/icon-192.png">
 </head>
 <body class="pb-24">
 
@@ -225,7 +221,7 @@
         
         if(type==='tambah_modal'){ t.innerText="Tambah Modal Kas"; b.innerHTML=`<input id="m-ket" placeholder="Keterangan"><input id="m-nom" type="number" placeholder="Nominal (Rp)">`; btn.onclick=async()=>{ await supabase.from('pengeluaran').insert([{keterangan:"[MODAL] "+document.getElementById('m-ket').value, nominal:-Math.abs(document.getElementById('m-nom').value)}]); window.closeModal(); window.loadAll();};}
         else if(type==='pengeluaran'){ t.innerText="Catat Biaya"; b.innerHTML=`<input id="e-ket" placeholder="Keterangan Pengeluaran"><input id="e-nom" type="number" placeholder="Nominal (Rp)">`; btn.onclick=async()=>{ await supabase.from('pengeluaran').insert([{keterangan:document.getElementById('e-ket').value, nominal:document.getElementById('e-nom').value}]); window.closeModal(); window.loadAll();};}
-        else if(type==='pelanggan'){ t.innerText="Pelanggan Baru"; b.innerHTML=`<input id="p-nama" placeholder="Nama Pelanggan"><input id="p-hp" type="tel" placeholder="Nomor HP (Contoh: 0812...)">`; btn.onclick=async()=>{ await supabase.from('pelanggan').insert([{nama:document.getElementById('p-nama').value}]); window.closeModal(); window.loadAll();};}
+        else if(type==='pelanggan'){ t.innerText="Pelanggan Baru"; b.innerHTML=`<input id="p-nama" placeholder="Nama Pelanggan - Merek Mobil - Tahun Mobil - Nomor HP">`; btn.onclick=async()=>{ await supabase.from('pelanggan').insert([{nama:document.getElementById('p-nama').value}]); window.closeModal(); window.loadAll();};}
         else if(type==='kendaraan'){ 
             const { data: pL } = await supabase.from('pelanggan').select('*');
             t.innerText="Unit Baru"; b.innerHTML=`<select id="p-sel">${pL.map(x=>`<option value="${x.id}">${x.nama}</option>`).join('')}</select><input id="p-plat" class="uppercase" placeholder="Plat Nomor">`;
@@ -294,13 +290,6 @@
 
     window.closeModal=()=>{ document.getElementById('modal-container').classList.add('hidden'); keranjang=[]; };
     window.hapus=async(t,id)=>{ if(confirm("Hapus Permanen?")){ await supabase.from(t).delete().eq('id',id); window.loadAll(); } };
-</script>
-<script>
-  if ('serviceWorker' in navigator) {
-    navigator.serviceWorker.register('sw.js').then(() => {
-      console.log('Service Worker Registered');
-    });
-  }
 </script>
 </body>
 </html>
