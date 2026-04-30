@@ -343,17 +343,63 @@
         window.loadAll();
     };
 }
-        else if(type==='servis'){
-            t.innerText="Workshop Input"; b.innerHTML=`<input id="s-kel" placeholder="Pekerjaan / Keluhan"><input id="s-jasa" type="number" placeholder="Jasa (Rp)" oninput="window.calc()"><div class="bg-zinc-900 p-4 rounded-xl border border-zinc-800"><div id="spare-area"></div><div id="bsk" class="mt-2 text-[10px] text-zinc-400"></div></div><div class="grid grid-cols-2 gap-2"><select id="s-met"><option value="Tunai">💰 Tunai</option><option value="Transfer">🏦 Transfer</option></select><input id="s-bayar" type="number" placeholder="Bayar (Rp)" oninput="window.calc()"></div><p id="v-sisa" class="text-[10px] text-red-500 font-bold italic">Sisa Tagihan: Rp 0</p>`;
+       else if(type==='servis'){
+            t.innerText="Workshop Input"; 
+            b.innerHTML=`
+                <input id="s-kel" placeholder="Pekerjaan / Keluhan">
+                <input id="s-jasa" type="number" placeholder="Jasa (Rp)" oninput="window.calc()">
+                <div class="bg-zinc-900 p-4 rounded-xl border border-zinc-800">
+                    <div id="spare-area"></div>
+                    <div id="bsk" class="mt-2 text-[10px] text-zinc-400"></div>
+                </div>
+                <div class="grid grid-cols-2 gap-2">
+                    <select id="s-met">
+                        <option value="Tunai">💰 Tunai</option>
+                        <option value="Transfer">🏦 Transfer</option>
+                    </select>
+                    <input id="s-bayar" type="number" placeholder="Bayar (Rp)" oninput="window.calc()">
+                </div>
+                <p id="v-sisa" class="text-[10px] text-red-500 font-bold italic">Sisa Tagihan: Rp 0</p>`;
+            
             window.updateSpareArea(false);
-            btn.onclick=async()=>{
-                const totP = keranjang.reduce((a,b)=>a+(b.harga*b.qty),0);
-                const { data: n } = await supabase.from('servis').insert([{kendaraan_id:id, keluhan:document.getElementById('s-kel').value, jasa_service:document.getElementById('s-jasa').value||0, biaya_sparepart:totP, uang_muka:document.getElementById('s-bayar').value||0, metode_bayar:document.getElementById('s-met').value}]).select().single();
-                for(let it of keranjang){
-                    await supabase.from('detail_servis').insert([{servis_id:n.id, stok_id:it.stok_id, jumlah:it.qty, harga_satuan:it.harga}]);
-                    if(it.stok_id){ const {data:c}=await supabase.from('stok_sparepart').select('jumlah_stok').eq('id',it.stok_id).single(); await supabase.from('stok_sparepart').update({jumlah_stok:c.jumlah_stok-it.qty}).eq('id',it.stok_id); }
+
+            btn.onclick = async () => {
+                const jasaVal = parseInt(document.getElementById('s-jasa').value || 0);
+                const bayarVal = parseInt(document.getElementById('s-bayar').value || 0);
+                const totPart = keranjang.reduce((a, b) => a + (b.harga * b.qty), 0);
+
+                // 1. Simpan data utama ke tabel 'servis'
+                const { data: n, error: errS } = await supabase.from('servis').insert([{
+                    kendaraan_id: id, 
+                    keluhan: document.getElementById('s-kel').value, 
+                    jasa_service: jasaVal, 
+                    biaya_sparepart: totPart, 
+                    uang_muka: bayarVal, 
+                    metode_bayar: document.getElementById('s-met').value
+                }]).select().single();
+
+                if (errS) return alert("Gagal simpan servis: " + errS.message);
+
+                // 2. Simpan rincian ke 'detail_servis' (PASTIKAN harga_satuan IKUT)
+                for (let it of keranjang) {
+                    await supabase.from('detail_servis').insert([{
+                        servis_id: n.id, 
+                        stok_id: it.stok_id, 
+                        jumlah: it.qty, 
+                        harga_satuan: it.harga // <--- Bagian krusial yang harus ada
+                    }]);
+
+                    // 3. Potong stok jika barang diambil dari gudang
+                    if (it.stok_id) { 
+                        const { data: c } = await supabase.from('stok_sparepart').select('jumlah_stok').eq('id', it.stok_id).single(); 
+                        await supabase.from('stok_sparepart').update({ 
+                            jumlah_stok: c.jumlah_stok - it.qty 
+                        }).eq('id', it.stok_id); 
+                    }
                 }
-                window.closeModal(); window.loadAll();
+                
+                window.closeModal(); 
+                window.loadAll();
             };
         }
         else if(type==='stok'){ t.innerText="Tambah Stok"; b.innerHTML=`<input id="st-n" placeholder="Nama Barang"><input id="st-h" type="number" placeholder="Harga Jual Satuan"><input id="st-j" type="number" placeholder="Jumlah Stok">`; btn.onclick=async()=>{ await supabase.from('stok_sparepart').insert([{nama_barang:document.getElementById('st-n').value, harga_jual_satuan:document.getElementById('st-h').value, jumlah_stok:document.getElementById('st-j').value, satuan:'Pcs'}]); window.closeModal(); window.loadAll();};}
