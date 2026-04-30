@@ -180,37 +180,84 @@
     };
 
     window.updateFinanceUI = () => {
-        const f = document.getElementById('filter-finance').value, now = new Date();
-        const fS = masterS.filter(x => { const d = new Date(x.created_at); return f==='hari'?d.toDateString()===now.toDateString():f==='bulan'?d.getMonth()===now.getMonth():true; });
-        const fE = masterE.filter(x => { const d = new Date(x.created_at); return f==='hari'?d.toDateString()===now.toDateString():f==='bulan'?d.getMonth()===now.getMonth():true; });
-        
-        let tunai = 0, bank = 0, keluar = 0, modal = 0;
-        fS.forEach(x => { if(x.metode_bayar==='Transfer') bank += parseInt(x.uang_muka || 0); else tunai += parseInt(x.uang_muka || 0); });
-        fE.forEach(x => { if(x.nominal < 0) modal += Math.abs(x.nominal); else keluar += parseInt(x.nominal || 0); });
-        const saldoLaci = (tunai + modal) - keluar;
+    const f = document.getElementById('filter-finance').value, now = new Date();
+    
+    // 1. Data Filtered (Hanya untuk rincian daftar di bawah)
+    const fS = masterS.filter(x => { 
+        const d = new Date(x.created_at); 
+        return f==='hari'?d.toDateString()===now.toDateString():f==='bulan'?d.getMonth()===now.getMonth():true; 
+    });
+    const fE = masterE.filter(x => { 
+        const d = new Date(x.created_at); 
+        return f==='hari'?d.toDateString()===now.toDateString():f==='bulan'?d.getMonth()===now.getMonth():true; 
+    });
 
-        document.getElementById('jurnal-summary-area').innerHTML = `
-            <div class="card-dark p-6 rounded-[2rem] border-l-4 border-emerald-500 bg-emerald-950/5">
-                <p class="text-[8px] text-zinc-500 font-bold uppercase mb-1">Saldo Bersih Saat Ini</p>
-                <h2 class="text-3xl font-black text-emerald-500 tracking-tighter">Rp ${saldoLaci.toLocaleString()}</h2>
-                <div class="grid grid-cols-2 gap-4 mt-4 pt-4 border-t border-white/5">
-                    <div><p class="text-[7px] text-zinc-500 uppercase">Total Servis (Tunai)</p><p class="text-xs font-bold">Rp ${tunai.toLocaleString()}</p></div>
-                    <div><p class="text-[7px] text-zinc-500 uppercase">Transfer Bank</p><p class="text-xs font-bold text-blue-500">Rp ${bank.toLocaleString()}</p></div>
+    // 2. HITUNG SALDO KESELURUHAN (KUMULATIF)
+    // Kita hitung dari 'masterS' dan 'masterE' tanpa filter waktu agar saldo terus berlanjut
+    let totalTunaiSemua = 0;
+    let totalBankSemua = 0;
+    let totalModalSemua = 0;
+    let totalKeluarSemua = 0;
+
+    masterS.forEach(x => {
+        if(x.metode_bayar === 'Transfer') totalBankSemua += parseInt(x.uang_muka || 0);
+        else totalTunaiSemua += parseInt(x.uang_muka || 0);
+    });
+
+    masterE.forEach(x => {
+        if(x.nominal < 0) totalModalSemua += Math.abs(x.nominal);
+        else totalKeluarSemua += parseInt(x.nominal || 0);
+    });
+
+    // Rumus Saldo Akhir (Semua Uang Masuk - Semua Uang Keluar)
+    const saldoBerlanjut = (totalTunaiSemua + totalModalSemua) - totalKeluarSemua;
+    
+    // Hitung Pemasukan Khusus Filter (Hari/Bulan ini saja)
+    let tunaiFilter = 0, bankFilter = 0;
+    fS.forEach(x => {
+        if(x.metode_bayar === 'Transfer') bankFilter += parseInt(x.uang_muka || 0);
+        else tunaiFilter += parseInt(x.uang_muka || 0);
+    });
+    const pemasukanSementara = tunaiFilter + bankFilter;
+
+    // TAMPILKAN KE UI
+    document.getElementById('jurnal-summary-area').innerHTML = `
+        <div class="card-dark p-6 rounded-[2rem] border-l-4 border-emerald-500 bg-emerald-950/5">
+            <p class="text-[8px] text-zinc-500 font-bold uppercase mb-1">Total Saldo Kas (Kumulatif)</p>
+            <h2 class="text-3xl font-black text-emerald-500 tracking-tighter">Rp ${saldoBerlanjut.toLocaleString()}</h2>
+            
+            <div class="mt-4 pt-4 border-t border-white/5 space-y-3">
+                <div class="flex justify-between items-center bg-emerald-500/10 p-2 rounded-lg">
+                    <p class="text-[9px] text-emerald-400 font-black uppercase italic">Pemasukan (${f})</p>
+                    <p class="text-sm font-black text-emerald-400">Rp ${pemasukanSementara.toLocaleString()}</p>
                 </div>
-            </div>`;
 
-        document.getElementById('jurnal-in-body').innerHTML = fS.map(x => `
-            <div class="flex justify-between border-b border-white/5 pb-2">
-                <div><span class="font-bold text-zinc-300">${x.kendaraan?.plat}</span><br><span class="text-[8px] uppercase text-zinc-500">${x.metode_bayar}</span></div>
-                <span class="font-bold text-emerald-500">Rp ${parseInt(x.uang_muka).toLocaleString()}</span>
-            </div>`).join('') + (modal > 0 ? `<div class="bg-emerald-500/10 p-2 rounded mt-2 flex justify-between font-bold"><span>TOTAL MODAL MASUK</span><span>Rp ${modal.toLocaleString()}</span></div>` : '');
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <p class="text-[7px] text-zinc-500 uppercase">Tunai (${f})</p>
+                        <p class="text-xs font-bold text-white">Rp ${tunaiFilter.toLocaleString()}</p>
+                    </div>
+                    <div>
+                        <p class="text-[7px] text-zinc-500 uppercase">Transfer (${f})</p>
+                        <p class="text-xs font-bold text-blue-500">Rp ${bankFilter.toLocaleString()}</p>
+                    </div>
+                </div>
+            </div>
+        </div>`;
 
-        document.getElementById('jurnal-out-body').innerHTML = fE.filter(e => e.nominal > 0).map(x => `
-            <div class="flex justify-between border-b border-white/5 pb-2">
-                <span>${x.keterangan}</span>
-                <span class="font-bold text-red-500">Rp ${x.nominal.toLocaleString()}</span>
-            </div>`).join('') + `<div class="bg-red-500/10 p-2 rounded mt-2 flex justify-between font-bold"><span>TOTAL PENGELUARAN</span><span>Rp ${keluar.toLocaleString()}</span></div>`;
-    };
+    // Render rincian daftar In/Out (tetap menggunakan filter agar tidak kepanjangan)
+    document.getElementById('jurnal-in-body').innerHTML = fS.map(x => `
+        <div class="flex justify-between border-b border-white/5 pb-2">
+            <div><span class="font-bold text-zinc-300">${x.kendaraan?.plat}</span><br><span class="text-[8px] text-zinc-500">${x.metode_bayar}</span></div>
+            <span class="font-bold text-emerald-500">Rp ${parseInt(x.uang_muka).toLocaleString()}</span>
+        </div>`).join('');
+
+    document.getElementById('jurnal-out-body').innerHTML = fE.map(x => `
+        <div class="flex justify-between border-b border-white/5 pb-2">
+            <span class="${x.nominal < 0 ? 'text-emerald-400' : ''}">${x.keterangan}</span>
+            <span class="font-bold ${x.nominal < 0 ? 'text-emerald-400' : 'text-red-500'}">Rp ${Math.abs(x.nominal).toLocaleString()}</span>
+        </div>`).join('');
+};
 
     window.printJurnalReport = () => {
         const f = document.getElementById('filter-finance').value, now = new Date();
