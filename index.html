@@ -103,11 +103,7 @@
         </div>
     </div>
 </div>
-<!-- Tambahkan ini di atas atau di bawah list pengeluaran Anda -->
-<div class="flex justify-between items-center p-3 bg-zinc-900/50 rounded-xl border border-zinc-800 mb-4">
-    <p class="text-[10px] font-bold text-zinc-500 uppercase">Total Pengeluaran (Filter)</p>
-    <p id="total-pengeluaran-filter" class="text-xs font-black text-red-500">Rp 0</p>
-</div>
+
 <div id="modal-container" class="fixed inset-0 bg-black/95 hidden flex items-center justify-center p-4 z-[100] backdrop-blur-md">
     <div class="card-dark w-full max-w-lg p-6 rounded-[2rem] shadow-2xl overflow-y-auto max-h-[90vh]">
         <h3 id="modal-title" class="text-lg font-bold text-orange-500 mb-6 uppercase italic">Modal</h3>
@@ -292,9 +288,6 @@
             <span class="font-bold ${x.nominal < 0 ? 'text-emerald-400' : 'text-red-500'}">Rp ${Math.abs(x.nominal).toLocaleString()}</span>
         </div>`).join('');
 };
-// 1. Hitung total dari pengeluaran yang sudah terfilter (fE)
-// Pastikan nama variabel 'fE' sesuai dengan yang ada di kode Anda
-const totalKeluarHarian = fE.reduce((a, b) => a + Math.abs(parseInt(b.nominal || 0)), 0);
 
 // 2. Tampilkan ke layar
 const labelTotalE = document.getElementById('total-pengeluaran-filter');
