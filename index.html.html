@@ -176,6 +176,7 @@
                 <div class="flex justify-between items-start">
                     <div><h3 class="text-lg font-black text-orange-500 italic">${x.kendaraan?.plat}</h3><p class="text-[9px] text-zinc-500 uppercase">${x.kendaraan?.pelanggan?.nama || '-'}</p></div>
                     <button onclick="window.printNotaFull('${x.id}')" class="text-orange-500"><i class="fa-solid fa-print"></i></button>
+                    <button onclick="window.sendWA('${x.id}')" class="text-emerald-500 ml-3"><i class="fa-brands fa-whatsapp"></i></button>
                 </div>
                 <p class="text-[9px] text-zinc-400 mt-2 italic">Kerja: ${x.keluhan}</p>
                 <div class="mt-3 flex justify-between items-center pt-3 border-t border-white/5">
@@ -532,6 +533,42 @@ if (labelTotalE) {
     };
     window.closeModal=()=>{ document.getElementById('modal-container').classList.add('hidden'); keranjang=[]; };
     window.hapus=async(t,id)=>{ if(confirm("Hapus Permanen?")){ await supabase.from(t).delete().eq('id',id); window.loadAll(); } };
+
+    // TEMPELKAN INI DI BAGIAN PALING BAWAH SEBELUM </script>
+window.sendWA = async (id) => {
+    try {
+        const { data: s, error } = await supabase.from('servis').select('*, kendaraan(*, pelanggan(*))').eq('id', id).single();
+        
+        if (error || !s) return alert("Data servis tidak ditemukan!");
+        if (!s.kendaraan?.pelanggan?.no_hp) return alert("Nomor HP pelanggan kosong!");
+
+        const t = new Date(s.created_at);
+        const jasa = parseInt(s.jasa_service || 0);
+        const part = parseInt(s.biaya_sparepart || 0);
+        const bayar = parseInt(s.uang_muka || 0);
+        const total = jasa + part;
+        const sisa = total - bayar;
+        
+        let hp = s.kendaraan.pelanggan.no_hp.replace(/[^0-9]/g, '');
+        if (hp.startsWith('0')) hp = '62' + hp.slice(1);
+
+        let pesan = `*NOTA SERVIS - JE GARAGE*%0A` +
+                    `Tanggal: ${t.toLocaleDateString()}%0A` +
+                    `Unit: ${s.kendaraan.plat}%0A` +
+                    `--------------------------%0A` +
+                    `*Rincian:*%0A${s.nama_sparepart_manual ? s.nama_sparepart_manual.replace(/ \| /g, '%0A• ') : s.keluhan}%0A` +
+                    `--------------------------%0A` +
+                    `Total: Rp ${total.toLocaleString()}%0A` +
+                    `Bayar: Rp ${bayar.toLocaleString()}%0A` +
+                    `*Sisa: Rp ${sisa.toLocaleString()}*%0A%0A` +
+                    `Terima Kasih!`;
+
+        window.open(`https://wa.me/${hp}?text=${pesan}`, '_blank');
+    } catch (err) {
+        console.error("WA Error:", err);
+        alert("Gagal membuka WhatsApp");
+    }
+};
 </script>
 </body>
 </html>
