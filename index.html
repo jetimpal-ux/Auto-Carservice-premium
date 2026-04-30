@@ -191,41 +191,7 @@
         const d = new Date(x.created_at); 
         return f==='hari'?d.toDateString()===now.toDateString():f==='bulan'?d.getMonth()===now.getMonth():true; 
     });
-        window.updateFinanceUI = () => {
-    // ... kode filter harian/bulanan yang sudah ada ...
-
-    // --- LOGIKA DAFTAR PIUTANG (TIDAK TERPENGARUH FILTER HARI) ---
-    // Kita filter dari masterS tanpa peduli tanggalnya (kumulatif)
-    const daftarPiutang = masterS.filter(x => {
-        const totalBiaya = parseInt(x.jasa_service || 0) + parseInt(x.biaya_sparepart || 0);
-        const sudahBayar = parseInt(x.uang_muka || 0);
-        return sudahBayar < totalBiaya; // Hanya ambil yang belum lunas
-    });
-
-    let totalNominalPiutang = 0;
-
-    document.getElementById('list-piutang').innerHTML = daftarPiutang.length ? daftarPiutang.map(x => {
-        const total = parseInt(x.jasa_service || 0) + parseInt(x.biaya_sparepart || 0);
-        const sisa = total - parseInt(x.uang_muka || 0);
-        totalNominalPiutang += sisa;
-
-        return `
-            <div class="bg-red-600/5 border border-red-900/30 p-3 rounded-2xl flex justify-between items-center">
-                <div>
-                    <p class="text-[10px] font-black text-white italic">${x.kendaraan?.plat || 'Unit'}</p>
-                    <p class="text-[8px] text-zinc-500 uppercase">${x.kendaraan?.pelanggan?.nama || '-'}</p>
-                </div>
-                <div class="text-right">
-                    <p class="text-[10px] font-black text-red-500">Rp ${sisa.toLocaleString()}</p>
-                    <button onclick="window.bayarSisaModal('${x.id}', ${sisa})" class="text-[7px] bg-red-600 text-white px-2 py-1 rounded-md font-bold mt-1 uppercase">Lunasi</button>
-                </div>
-            </div>`;
-    }).join('') : `<p class="text-[10px] text-zinc-600 italic">Semua tagihan sudah lunas.</p>`;
-
-    document.getElementById('total-piutang-label').innerText = `Total Piutang: Rp ${totalNominalPiutang.toLocaleString()}`;
-
-    // ... sisa kode finance UI lainnya (saldo harian dll) ...
-};
+       
     // 2. HITUNG SALDO KESELURUHAN (KUMULATIF)
     // Kita hitung dari 'masterS' dan 'masterE' tanpa filter waktu agar saldo terus berlanjut
     let totalTunaiSemua = 0;
