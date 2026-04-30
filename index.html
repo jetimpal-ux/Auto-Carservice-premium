@@ -27,6 +27,11 @@
             th, td { padding: 4px; text-align: left; }
             .print-title { text-align: center; font-weight: bold; margin-bottom: 15px; font-size: 12px; }
         }
+        @media print {
+    .no-print {
+        display: none !important;
+    }
+}
     </style>
 </head>
 <body class="pb-24">
@@ -165,6 +170,12 @@
     </div>`).join('');
         document.getElementById('list-stok').innerHTML = st.map(i => `<div class="card-dark p-3 rounded-2xl border-l-4 ${i.jumlah_stok < 5 ? 'border-red-600' : 'border-blue-500'} flex justify-between items-center"><div><p class="text-[8px] text-zinc-500 uppercase">${i.nama_barang}</p><h4 class="text-base font-black">${i.jumlah_stok}</h4></div><button onclick="window.hapus('stok_sparepart','${i.id}')" class="text-zinc-800"><i class="fa-solid fa-trash"></i></button></div>`).join('');
         window.renderWorkshop(); window.updateFinanceUI();
+        // Tambahkan ini di bawah tabel total pada fungsi printNotaFull
+<div style="margin-top: 20px; text-align: center;" class="no-print">
+    <button onclick="window.sendWA('${s.id}')" style="background: #25D366; color: white; border: none; padding: 10px 20px; border-radius: 8px; font-weight: bold; cursor: pointer;">
+        <i class="fa-brands fa-whatsapp"></i> Kirim ke WhatsApp
+    </button>
+</div>
     };
 
     window.renderWorkshop = () => {
@@ -532,6 +543,45 @@ if (labelTotalE) {
     };
     window.closeModal=()=>{ document.getElementById('modal-container').classList.add('hidden'); keranjang=[]; };
     window.hapus=async(t,id)=>{ if(confirm("Hapus Permanen?")){ await supabase.from(t).delete().eq('id',id); window.loadAll(); } };
-</script>
+
+    window.sendWA = async (id) => {
+    // Ambil data servis terbaru dari Supabase
+    const { data: s } = await supabase.from('servis').select('*, kendaraan(*, pelanggan(*))').eq('id', id).single();
+    
+    if (!s.kendaraan?.pelanggan?.no_hp) {
+        return alert("Nomor WhatsApp pelanggan tidak ditemukan!");
+    }
+
+    const t = new Date(s.created_at);
+    const jasa = parseInt(s.jasa_service || 0);
+    const part = parseInt(s.biaya_sparepart || 0);
+    const total = jasa + part;
+    const sisa = total - parseInt(s.uang_muka || 0);
+    
+    // Format nomor HP (pastikan mulai dengan 62)
+    let hp = s.kendaraan.pelanggan.no_hp.replace(/[^0-9]/g, '');
+    if (hp.startsWith('0')) hp = '62' + hp.slice(1);
+
+    // Susun Pesan WhatsApp
+    let pesan = `*NOTA SERVIS - JE GARAGE*%0A`;
+    pesan += `Tanggal: ${t.toLocaleDateString()}%0A`;
+    pesan += `Unit: ${s.kendaraan.plat}%0A`;
+    pesan += `Pekerjaan: ${s.keluhan || '-'}%0A`;
+    pesan += `--------------------------%0A`;
+    pesan += `*Rincian Part:*%0A${s.nama_sparepart_manual ? s.nama_sparepart_manual.replace(/ \| /g, '%0A• ') : '-'}%0A`;
+    pesan += `--------------------------%0A`;
+    pesan += `Jasa: Rp ${jasa.toLocaleString()}%0A`;
+    pesan += `Part: Rp ${part.toLocaleString()}%0A`;
+    pesan += `*TOTAL: Rp ${total.toLocaleString()}*%0A`;
+    pesan += `Bayar: Rp ${parseInt(s.uang_muka).toLocaleString()}%0A`;
+    pesan += `*Sisa: Rp ${sisa.toLocaleString()}*%0A`;
+    pesan += `--------------------------%0A`;
+    pesan += `Terima Kasih telah mempercayakan kendaraan Anda di JE GARAGE.`;
+
+    // Buka WhatsApp
+    window.open(`https://wa.me/${hp}?text=${pesan}`, '_blank');
+};
+
+    </script>
 </body>
 </html>
