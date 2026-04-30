@@ -439,7 +439,6 @@
     };
 
     window.printNotaFull = async (id) => {
-    // 1. Ambil data servis utama dan detail itemnya
     const { data: s } = await supabase.from('servis').select('*, kendaraan(*, pelanggan(*))').eq('id', id).single();
     const { data: detail } = await supabase.from('detail_servis').select('*, stok_sparepart(nama_barang)').eq('servis_id', id);
     
@@ -449,18 +448,17 @@
     const totalSemua = totJasa + totPart;
     const sisa = totalSemua - parseInt(s.uang_muka || 0);
 
-    // 2. Buat baris rincian kerja/sparepart dengan harganya
+    // Baris rincian sparepart
     let itemRows = (detail || []).map(d => `
         <tr>
             <td style="padding: 2px 0;">${d.stok_sparepart?.nama_barang || 'Part Luar'}</td>
             <td align="center">x${d.jumlah}</td>
-            <td align="right">Rp ${(d.harga_satuan * d.jumlah).toLocaleString()}</td>
+            <td align="right">${(parseInt(d.harga_satuan || 0) * d.jumlah).toLocaleString()}</td>
         </tr>
     `).join('');
 
-    // 3. Masukkan ke area cetak
     document.getElementById('print-area').innerHTML = `
-        <div style="font-family:monospace; padding:10px; color:#000; width:300px; margin:auto;">
+        <div style="font-family:monospace; padding:10px; color:#000; width:100%; max-width:300px; margin:auto;">
             <center>
                 <h2 style="margin-bottom:0;">JE GARAGE</h2>
                 <p style="font-size:10px;">${t.toLocaleDateString()} | ${t.toLocaleTimeString()}</p>
@@ -468,17 +466,22 @@
             <hr style="border-top:1px dashed #000;">
             
             <table width="100%" style="font-size:11px;">
-                <tr><td>Plat</td><td>: ${s.kendaraan?.plat}</td></tr>
+                <tr><td>Plat</td><td>: <b>${s.kendaraan?.plat}</b></td></tr>
                 <tr><td>Pemilik</td><td>: ${s.kendaraan?.pelanggan?.nama || '-'}</td></tr>
             </table>
             
             <hr style="border-top:1px dashed #000;">
-            <p style="font-size:10px; margin-bottom:5px;"><b>RINCIAN KERJA & PART:</b></p>
-            <table width="100%" style="font-size:11px;">
-                <tr>
-                    <td>Biaya Jasa</td>
+            
+            <div style="font-size:11px; margin-bottom:5px;">
+                <b>Pekerjaan:</b><br>
+                ${s.keluhan || '-'}
+            </div>
+
+            <table width="100%" style="font-size:11px; border-collapse: collapse;">
+                <tr style="border-bottom:1px solid #eee;">
+                    <td style="padding: 4px 0;">Biaya Jasa</td>
                     <td></td>
-                    <td align="right">Rp ${totJasa.toLocaleString()}</td>
+                    <td align="right">${totJasa.toLocaleString()}</td>
                 </tr>
                 ${itemRows}
             </table>
@@ -491,13 +494,11 @@
                 </tr>
                 <tr style="font-weight:normal; font-size:10px;">
                     <td>BAYAR (${s.metode_bayar})</td>
-                    <td align="right">Rp ${parseInt(s.uang_muka).toLocaleString()}</td>
+                    <td align="right">${parseInt(s.uang_muka).toLocaleString()}</td>
                 </tr>
                 <tr>
                     <td>${sisa > 0 ? 'SISA' : 'STATUS'}</td>
-                    <td align="right" style="color:${sisa > 0 ? 'red' : 'black'}">
-                        ${sisa > 0 ? 'Rp ' + sisa.toLocaleString() : 'LUNAS'}
-                    </td>
+                    <td align="right">${sisa > 0 ? 'Rp ' + sisa.toLocaleString() : 'LUNAS'}</td>
                 </tr>
             </table>
             <hr style="border-top:1px dashed #000;">
