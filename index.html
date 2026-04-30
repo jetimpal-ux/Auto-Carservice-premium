@@ -434,39 +434,67 @@
         const jasa = parseInt(s.jasa_service || 0);
         const part = parseInt(s.biaya_sparepart || 0);
         const total = jasa + part;
-        const sisa = total - parseInt(s.uang_muka || 0);
+        const bayar = parseInt(s.uang_muka || 0);
+        const sisa = total - bayar;
 
-        // Memecah teks rincian agar muncul per baris di nota
-        const listBarang = s.nama_sparepart_manual ? s.nama_sparepart_manual.split(" | ").map(item => `<div style="border-bottom:1px solid #eee; padding:2px 0;">• ${item}</div>`).join("") : "-";
+        // Memecah teks rincian agar muncul per baris dengan bullet point
+        const listBarang = s.nama_sparepart_manual ? s.nama_sparepart_manual.split(" | ").map(item => `
+            <div style="display: flex; justify-content: space-between; border-bottom: 1px dashed #eee; padding: 2px 0;">
+                <span style="flex: 1;">• ${item.split(' (')[0]}</span>
+                <span style="white-space: nowrap; margin-left: 10px;">${item.includes('(') ? item.split(' (')[1].replace(')', '') : ''}</span>
+            </div>`).join("") : "-";
 
         document.getElementById('print-area').innerHTML = `
-            <div style="font-family:monospace; padding:10px; width:300px; color:#000; margin:auto; border:1px solid #eee;">
-                <center><h2 style="margin:0;">JE GARAGE</h2><p style="font-size:10px;">${t.toLocaleDateString()} ${t.toLocaleTimeString()}</p></center>
-                <hr style="border-top:1px dashed #000">
-                <table width="100%" style="font-size:11px">
-                    <tr><td>Unit</td><td>: <b>${s.kendaraan?.plat}</b></td></tr>
+            <div style="font-family:monospace; padding:10px; width:280px; color:#000; margin:auto; line-height: 1.2;">
+                <center>
+                    <h2 style="margin:0; letter-spacing: 2px;">JE GARAGE</h2>
+                    <p style="font-size:10px; margin: 5px 0;">${t.toLocaleDateString()} | ${t.toLocaleTimeString()}</p>
+                </center>
+                
+                <hr style="border-top:1px solid #000">
+                <table width="100%" style="font-size:11px; margin-bottom: 5px;">
+                    <tr><td width="30%">Unit</td><td>: <b>${s.kendaraan?.plat}</b></td></tr>
                     <tr><td>Pemilik</td><td>: ${s.kendaraan?.pelanggan?.nama || '-'}</td></tr>
                     <tr><td>Kerja</td><td>: ${s.keluhan || '-'}</td></tr>
                 </table>
-                <hr style="border-top:1px dashed #000">
-                <div style="font-size:10px;">
-                    <b>RINCIAN PART & HARGA:</b><br>
-                    ${listBarang}
+                
+                <div style="font-size:10px; border-top: 1px solid #000; padding-top: 5px;">
+                    <b>RINCIAN PART & HARGA:</b>
+                    <div style="margin-top: 5px;">${listBarang}</div>
                 </div>
-                <hr style="border-top:1px dashed #000">
-                <table width="100%" style="font-size:11px">
-                    <tr><td>Jasa Servis</td><td align="right">${jasa.toLocaleString()}</td></tr>
-                    <tr><td>Total Part</td><td align="right">${part.toLocaleString()}</td></tr>
-                    <tr style="font-weight:bold; font-size:12px"><td>TOTAL</td><td align="right">Rp ${total.toLocaleString()}</td></tr>
-                    <tr style="font-size:10px"><td>BAYAR (${s.metode_bayar})</td><td align="right">${parseInt(s.uang_muka).toLocaleString()}</td></tr>
-                    <tr style="font-weight:bold;"><td>${sisa > 0 ? 'SISA' : 'STATUS'}</td><td align="right">${sisa > 0 ? 'Rp '+sisa.toLocaleString() : 'LUNAS'}</td></tr>
-                </table>
-                <hr style="border-top:1px dashed #000">
-                <center><p style="font-size:9px;">Terima Kasih</p></center>
+
+                <div style="margin-top: 10px; border-top: 1px solid #000; padding-top: 5px;">
+                    <table width="100%" style="font-size:11px;">
+                        <tr>
+                            <td>Biaya Jasa Servis</td>
+                            <td align="right">Rp ${jasa.toLocaleString()}</td>
+                        </tr>
+                        <tr style="border-bottom: 1px solid #eee;">
+                            <td>Total Biaya Part</td>
+                            <td align="right">Rp ${part.toLocaleString()}</td>
+                        </tr>
+                        <tr style="font-weight:bold; font-size:13px;">
+                            <td style="padding-top: 5px;">TOTAL AKHIR</td>
+                            <td align="right" style="padding-top: 5px;">Rp ${total.toLocaleString()}</td>
+                        </tr>
+                        <tr>
+                            <td style="font-size: 10px;">Bayar (${s.metode_bayar})</td>
+                            <td align="right" style="font-size: 10px;">Rp ${bayar.toLocaleString()}</td>
+                        </tr>
+                        <tr style="font-weight:bold;">
+                            <td>${sisa > 0 ? 'SISA TAGIHAN' : 'STATUS'}</td>
+                            <td align="right" style="color: ${sisa > 0 ? 'red' : 'black'};">
+                                ${sisa > 0 ? 'Rp ' + sisa.toLocaleString() : 'LUNAS'}
+                            </td>
+                        </tr>
+                    </table>
+                </div>
+
+                <hr style="border-top:1px dashed #000; margin-top: 15px;">
+                <center><p style="font-size:9px;">Terima Kasih Telah Berkunjung</p></center>
             </div>`;
         window.print();
     };
-
     window.closeModal=()=>{ document.getElementById('modal-container').classList.add('hidden'); keranjang=[]; };
     window.hapus=async(t,id)=>{ if(confirm("Hapus Permanen?")){ await supabase.from(t).delete().eq('id',id); window.loadAll(); } };
 </script>
