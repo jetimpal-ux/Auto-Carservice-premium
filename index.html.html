@@ -534,7 +534,6 @@ if (labelTotalE) {
     window.closeModal=()=>{ document.getElementById('modal-container').classList.add('hidden'); keranjang=[]; };
     window.hapus=async(t,id)=>{ if(confirm("Hapus Permanen?")){ await supabase.from(t).delete().eq('id',id); window.loadAll(); } };
 
-    // TEMPELKAN INI DI BAGIAN PALING BAWAH SEBELUM </script>
 window.sendWA = async (id) => {
     try {
         const { data: s, error } = await supabase.from('servis').select('*, kendaraan(*, pelanggan(*))').eq('id', id).single();
