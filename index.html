@@ -82,7 +82,13 @@
             <button onclick="window.openModal('pengeluaran')" class="bg-red-600 px-4 rounded-xl text-[9px] font-bold uppercase">Biaya</button>
             <button onclick="window.printJurnalReport()" class="bg-zinc-800 px-4 rounded-xl text-[10px] border border-zinc-700"><i class="fa-solid fa-print"></i></button>
         </div>
-        
+        <!-- Cukup tempelkan ini di dalam tab laporan Anda -->
+<div class="mt-6 p-4 bg-zinc-900/50 rounded-3xl border border-zinc-800">
+    <h3 class="text-[10px] font-black text-red-500 uppercase italic mb-3">⚠️ Daftar Piutang (Belum Lunas)</h3>
+    <div id="list-piutang" class="space-y-2">
+        <!-- Data piutang akan muncul di sini -->
+    </div>
+</div>
         <div id="jurnal-summary-area" class="mb-6"></div>
 
         <div class="space-y-4">
@@ -220,6 +226,30 @@
     });
     const pemasukanSementara = tunaiFilter + bankFilter;
 
+// SISIPKAN KODE INI DI AKHIR FUNGSI updateFinanceUI
+    const daftarPiutang = masterS.filter(x => {
+        const total = parseInt(x.jasa_service || 0) + parseInt(x.biaya_sparepart || 0);
+        return parseInt(x.uang_muka || 0) < total;
+    });
+
+    const targetDiv = document.getElementById('list-piutang');
+    if (targetDiv) {
+        targetDiv.innerHTML = daftarPiutang.length ? daftarPiutang.map(x => {
+            const sisa = (parseInt(x.jasa_service || 0) + parseInt(x.biaya_sparepart || 0)) - parseInt(x.uang_muka || 0);
+            return `
+                <div class="flex justify-between items-center p-3 bg-red-950/10 border border-red-900/20 rounded-xl">
+                    <div>
+                        <p class="text-[10px] font-bold text-white">${x.kendaraan?.plat || 'Unit'}</p>
+                        <p class="text-[8px] text-zinc-500 uppercase">${x.kendaraan?.pelanggan?.nama || '-'}</p>
+                    </div>
+                    <div class="text-right">
+                        <p class="text-[10px] font-black text-red-500">Rp ${sisa.toLocaleString()}</p>
+                        <button onclick="window.bayarSisaModal('${x.id}', ${sisa})" class="text-[7px] bg-red-600 text-white px-2 py-1 rounded mt-1 uppercase font-bold">Lunasi</button>
+                    </div>
+                </div>`;
+        }).join('') : `<p class="text-[9px] text-zinc-600 italic text-center">Semua tagihan lunas.</p>`;
+    }
+        
     // TAMPILKAN KE UI
     document.getElementById('jurnal-summary-area').innerHTML = `
         <div class="card-dark p-6 rounded-[2rem] border-l-4 border-emerald-500 bg-emerald-950/5">
