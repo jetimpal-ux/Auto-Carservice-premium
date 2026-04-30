@@ -69,6 +69,11 @@
         <input type="text" id="search-ws" placeholder="Cari Plat..." oninput="window.renderWorkshop()" class="text-xs italic mb-4">
         <div id="list-pro-workshop" class="space-y-4"></div>
     </div>
+
+    <div id="tab-stok" class="tab-content hidden">
+        <div class="grid grid-cols-2 gap-4" id="list-stok"></div>
+    </div>
+
     <div id="tab-finance" class="tab-content hidden">
         <div class="flex gap-2 mb-6">
             <select id="filter-finance" onchange="window.loadAll()" class="text-[10px] flex-1"><option value="hari">Hari Ini</option><option value="bulan">Bulan Ini</option><option value="semua">Semua</option></select>
@@ -420,7 +425,7 @@ if (labelTotalE) {
                 window.closeModal(); window.loadAll();
             };
         }
-        else if(type==='stok'){ t.innerText="Tambah Stok"; b.innerHTML=`<input id="st-n" placeholder="nama_barang"><input id="st-h" type="number" placeholder="Harga Jual Satuan"><input id="st-j" type="number" placeholder="Jumlah Stok">`; btn.onclick=async()=>{ await supabase.from('stok_sparepart').insert([{nama_barang:document.getElementById('st-n').value, harga_jual_satuan:document.getElementById('st-h').value, jumlah_stok:document.getElementById('st-j').value, satuan:'Pcs'}]); window.closeModal(); window.loadAll();};}
+        else if(type==='stok'){ t.innerText="Tambah Stok"; b.innerHTML=`<input id="st-n" placeholder="Nama Barang"><input id="st-h" type="number" placeholder="Harga Jual Satuan"><input id="st-j" type="number" placeholder="Jumlah Stok">`; btn.onclick=async()=>{ await supabase.from('stok_sparepart').insert([{nama_barang:document.getElementById('st-n').value, harga_jual_satuan:document.getElementById('st-h').value, jumlah_stok:document.getElementById('st-j').value, satuan:'Pcs'}]); window.closeModal(); window.loadAll();};}
     };
 
     window.updateSpareArea = async (m) => {
