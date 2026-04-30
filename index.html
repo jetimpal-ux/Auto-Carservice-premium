@@ -343,7 +343,7 @@
         window.loadAll();
     };
 }
-       else if(type==='servis'){
+        else if(type==='servis'){
             t.innerText="Workshop Input"; 
             b.innerHTML=`
                 <input id="s-kel" placeholder="Pekerjaan / Keluhan">
@@ -367,39 +367,28 @@
                 const jasaVal = parseInt(document.getElementById('s-jasa').value || 0);
                 const bayarVal = parseInt(document.getElementById('s-bayar').value || 0);
                 const totPart = keranjang.reduce((a, b) => a + (b.harga * b.qty), 0);
+                
+                // Menggabungkan rincian keranjang menjadi satu teks panjang
+                const teksRincian = keranjang.map(i => `${i.nama} (Rp ${i.harga.toLocaleString()}) x${i.qty}`).join(" | ");
 
-                // 1. Simpan data utama ke tabel 'servis'
-                const { data: n, error: errS } = await supabase.from('servis').insert([{
+                const { data: n } = await supabase.from('servis').insert([{
                     kendaraan_id: id, 
                     keluhan: document.getElementById('s-kel').value, 
                     jasa_service: jasaVal, 
                     biaya_sparepart: totPart, 
                     uang_muka: bayarVal, 
-                    metode_bayar: document.getElementById('s-met').value
+                    metode_bayar: document.getElementById('s-met').value,
+                    nama_sparepart_manual: teksRincian // Disimpan ke kolom yang sudah ada di gambar Anda
                 }]).select().single();
 
-                if (errS) return alert("Gagal simpan servis: " + errS.message);
-
-                // 2. Simpan rincian ke 'detail_servis' (PASTIKAN harga_satuan IKUT)
-                for (let it of keranjang) {
-                    await supabase.from('detail_servis').insert([{
-                        servis_id: n.id, 
-                        stok_id: it.stok_id, 
-                        jumlah: it.qty, 
-                        harga_satuan: it.harga // <--- Bagian krusial yang harus ada
-                    }]);
-
-                    // 3. Potong stok jika barang diambil dari gudang
-                    if (it.stok_id) { 
-                        const { data: c } = await supabase.from('stok_sparepart').select('jumlah_stok').eq('id', it.stok_id).single(); 
-                        await supabase.from('stok_sparepart').update({ 
-                            jumlah_stok: c.jumlah_stok - it.qty 
-                        }).eq('id', it.stok_id); 
+                // Potong stok gudang jika ada
+                for(let it of keranjang){
+                    if(it.stok_id){ 
+                        const {data:c}=await supabase.from('stok_sparepart').select('jumlah_stok').eq('id',it.stok_id).single(); 
+                        await supabase.from('stok_sparepart').update({jumlah_stok:c.jumlah_stok-it.qty}).eq('id',it.stok_id); 
                     }
                 }
-                
-                window.closeModal(); 
-                window.loadAll();
+                window.closeModal(); window.loadAll();
             };
         }
         else if(type==='stok'){ t.innerText="Tambah Stok"; b.innerHTML=`<input id="st-n" placeholder="Nama Barang"><input id="st-h" type="number" placeholder="Harga Jual Satuan"><input id="st-j" type="number" placeholder="Jumlah Stok">`; btn.onclick=async()=>{ await supabase.from('stok_sparepart').insert([{nama_barang:document.getElementById('st-n').value, harga_jual_satuan:document.getElementById('st-h').value, jumlah_stok:document.getElementById('st-j').value, satuan:'Pcs'}]); window.closeModal(); window.loadAll();};}
@@ -439,74 +428,44 @@
     };
 
     window.printNotaFull = async (id) => {
-    const { data: s } = await supabase.from('servis').select('*, kendaraan(*, pelanggan(*))').eq('id', id).single();
-    const { data: detail } = await supabase.from('detail_servis').select('*, stok_sparepart(nama_barang)').eq('servis_id', id);
-    
-    const t = new Date(s.created_at);
-    const totJasa = parseInt(s.jasa_service || 0);
-    const totPart = parseInt(s.biaya_sparepart || 0);
-    const totalSemua = totJasa + totPart;
-    const sisa = totalSemua - parseInt(s.uang_muka || 0);
+        const { data: s } = await supabase.from('servis').select('*, kendaraan(*, pelanggan(*))').eq('id', id).single();
+        
+        const t = new Date(s.created_at);
+        const jasa = parseInt(s.jasa_service || 0);
+        const part = parseInt(s.biaya_sparepart || 0);
+        const total = jasa + part;
+        const sisa = total - parseInt(s.uang_muka || 0);
 
-    // Baris rincian sparepart
-    let itemRows = (detail || []).map(d => `
-        <tr>
-            <td style="padding: 2px 0;">${d.stok_sparepart?.nama_barang || 'Part Luar'}</td>
-            <td align="center">x${d.jumlah}</td>
-            <td align="right">${(parseInt(d.harga_satuan || 0) * d.jumlah).toLocaleString()}</td>
-        </tr>
-    `).join('');
+        // Memecah teks rincian agar muncul per baris di nota
+        const listBarang = s.nama_sparepart_manual ? s.nama_sparepart_manual.split(" | ").map(item => `<div style="border-bottom:1px solid #eee; padding:2px 0;">• ${item}</div>`).join("") : "-";
 
-    document.getElementById('print-area').innerHTML = `
-        <div style="font-family:monospace; padding:10px; color:#000; width:100%; max-width:300px; margin:auto;">
-            <center>
-                <h2 style="margin-bottom:0;">JE GARAGE</h2>
-                <p style="font-size:10px;">${t.toLocaleDateString()} | ${t.toLocaleTimeString()}</p>
-            </center>
-            <hr style="border-top:1px dashed #000;">
-            
-            <table width="100%" style="font-size:11px;">
-                <tr><td>Plat</td><td>: <b>${s.kendaraan?.plat}</b></td></tr>
-                <tr><td>Pemilik</td><td>: ${s.kendaraan?.pelanggan?.nama || '-'}</td></tr>
-            </table>
-            
-            <hr style="border-top:1px dashed #000;">
-            
-            <div style="font-size:11px; margin-bottom:5px;">
-                <b>Pekerjaan:</b><br>
-                ${s.keluhan || '-'}
-            </div>
-
-            <table width="100%" style="font-size:11px; border-collapse: collapse;">
-                <tr style="border-bottom:1px solid #eee;">
-                    <td style="padding: 4px 0;">Biaya Jasa</td>
-                    <td></td>
-                    <td align="right">${totJasa.toLocaleString()}</td>
-                </tr>
-                ${itemRows}
-            </table>
-            
-            <hr style="border-top:1px dashed #000;">
-            <table width="100%" style="font-size:12px; font-weight:bold;">
-                <tr>
-                    <td>TOTAL</td>
-                    <td align="right">Rp ${totalSemua.toLocaleString()}</td>
-                </tr>
-                <tr style="font-weight:normal; font-size:10px;">
-                    <td>BAYAR (${s.metode_bayar})</td>
-                    <td align="right">${parseInt(s.uang_muka).toLocaleString()}</td>
-                </tr>
-                <tr>
-                    <td>${sisa > 0 ? 'SISA' : 'STATUS'}</td>
-                    <td align="right">${sisa > 0 ? 'Rp ' + sisa.toLocaleString() : 'LUNAS'}</td>
-                </tr>
-            </table>
-            <hr style="border-top:1px dashed #000;">
-            <center><p style="font-size:9px;">Terima Kasih</p></center>
-        </div>`;
-    
-    window.print();
-};
+        document.getElementById('print-area').innerHTML = `
+            <div style="font-family:monospace; padding:10px; width:300px; color:#000; margin:auto; border:1px solid #eee;">
+                <center><h2 style="margin:0;">JE GARAGE</h2><p style="font-size:10px;">${t.toLocaleDateString()} ${t.toLocaleTimeString()}</p></center>
+                <hr style="border-top:1px dashed #000">
+                <table width="100%" style="font-size:11px">
+                    <tr><td>Unit</td><td>: <b>${s.kendaraan?.plat}</b></td></tr>
+                    <tr><td>Pemilik</td><td>: ${s.kendaraan?.pelanggan?.nama || '-'}</td></tr>
+                    <tr><td>Kerja</td><td>: ${s.keluhan || '-'}</td></tr>
+                </table>
+                <hr style="border-top:1px dashed #000">
+                <div style="font-size:10px;">
+                    <b>RINCIAN PART & HARGA:</b><br>
+                    ${listBarang}
+                </div>
+                <hr style="border-top:1px dashed #000">
+                <table width="100%" style="font-size:11px">
+                    <tr><td>Jasa Servis</td><td align="right">${jasa.toLocaleString()}</td></tr>
+                    <tr><td>Total Part</td><td align="right">${part.toLocaleString()}</td></tr>
+                    <tr style="font-weight:bold; font-size:12px"><td>TOTAL</td><td align="right">Rp ${total.toLocaleString()}</td></tr>
+                    <tr style="font-size:10px"><td>BAYAR (${s.metode_bayar})</td><td align="right">${parseInt(s.uang_muka).toLocaleString()}</td></tr>
+                    <tr style="font-weight:bold;"><td>${sisa > 0 ? 'SISA' : 'STATUS'}</td><td align="right">${sisa > 0 ? 'Rp '+sisa.toLocaleString() : 'LUNAS'}</td></tr>
+                </table>
+                <hr style="border-top:1px dashed #000">
+                <center><p style="font-size:9px;">Terima Kasih</p></center>
+            </div>`;
+        window.print();
+    };
 
     window.closeModal=()=>{ document.getElementById('modal-container').classList.add('hidden'); keranjang=[]; };
     window.hapus=async(t,id)=>{ if(confirm("Hapus Permanen?")){ await supabase.from(t).delete().eq('id',id); window.loadAll(); } };
